@@ -22,6 +22,7 @@ public class DBMSPrompt {
 	static String version = "v1.01(example)";
 	static String copyright = "©2018 Nidhi Vaishnav";
 	static boolean isExit = false;
+
 	/*
 	 * Page size for alll files is 512 bytes by default.
 	 * You may choose to make it user modifiable
@@ -151,7 +152,6 @@ public class DBMSPrompt {
 		*  This switch handles a very small list of hardcoded commands of known syntax.
 		*  You will want to rewrite this method to interpret more complex commands. 
 		*/
-		System.out.println("command line token:"+ commandTokens);
 		switch (commandTokens.get(0)) {
 			case "create":
 				System.out.println("CASE: CREATE");
@@ -179,6 +179,10 @@ public class DBMSPrompt {
 				else {
 					dropTable(userCommand);
 				}
+				break;
+			case "use":
+				System.out.println("CASE: USE");
+				useDatabase(userCommand);
 				break;
 			case "insert":
 				System.out.println("CASE: INSERT");
@@ -220,9 +224,46 @@ public class DBMSPrompt {
 	 *  @param createDBString is a String of the user input
 	 */
 	public static void parseCreateDatabase(String createDBString) {
-		System.out.println("STUB: This is the createDatabase method.");
-		System.out.println("\tParsing the string:\"" + createDBString + "\"");
+//		System.out.println("STUB: This is the createDatabase method.");
+//		System.out.println("\tParsing the string:\"" + createDBString + "\"");
+		String currentPath = System.getProperty("user.dir");
+		
+		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(createDBString.split(" ")));
+		if (commandTokens.size()==3) {
+			try {
+				String dbName = commandTokens.get(2);
+				File dbFile = new File(currentPath+ "\\database\\" +dbName);
+				boolean dbExist=dbFile.exists();
+				
+				if (!dbExist) {
+					Boolean dbSuccessFlag = dbFile.mkdir();
+					if (!dbSuccessFlag) {
+						System.out.println("database "+dbName+" has not been created");
+					}
+					else {
+						File matadataFile = new File(currentPath+ "\\database\\" +dbName+"\\matadata");
+						File dataFile = new File(currentPath+ "\\database\\" +dbName+"\\data");
+						Boolean mdSuccessFlag = matadataFile.mkdir();
+						Boolean dataSuccessFlag = dataFile.mkdir();
+						if (mdSuccessFlag && dataSuccessFlag) {
+							System.out.println("database "+dbName+" is successfully created.");
+						}
+						else {
+							System.out.println("matadata or data is not created");
+						}
+					}
+				}
+				else {
+					System.out.println("Can't create database "+dbName+"; database already exists");
+				}
+			}
+			catch(Exception e){
+				System.out.println("Exception "+e);
+			}
+		}
 	}
+
+	
 	/**
 	 *  Stub method for creating database
 	 *  @param createDBString is a String of the user input
@@ -239,7 +280,14 @@ public class DBMSPrompt {
 		System.out.println("STUB: This is the dropDatabase method.");
 		System.out.println("\tParsing the string:\"" + dropDBString + "\"");
 	}
-	
+	/**
+	 *  Stub method for dropping database
+	 *  @param useDBString is a String of the user input
+	 */
+	public static void useDatabase(String useDBString) {
+		System.out.println("STUB: This is the useDatabase method.");
+		System.out.println("\tParsing the string:\"" + useDBString + "\"");
+	}
 	/**
 	 *  Stub method for creating new tables
 	 *  @param queryString is a String of the user input
