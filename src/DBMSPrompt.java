@@ -23,7 +23,7 @@ public class DBMSPrompt {
 	static String copyright = "©2018 Nidhi Vaishnav";
 	static boolean isExit = false;
 	static String currentPath = System.getProperty("user.dir")+"\\database\\";
-
+	static String currentDatabasePath = "";
 	/*
 	 * Page size for alll files is 512 bytes by default.
 	 * You may choose to make it user modifiable
@@ -173,7 +173,7 @@ public class DBMSPrompt {
 				}
 				break;
 			case "drop":
-				System.out.println("CASE: DROP");
+//				System.out.println("CASE: DROP");
 				if (commandTokens.get(1).equals("database")) {
 					dropDatabase(userCommand);
 				}
@@ -182,7 +182,7 @@ public class DBMSPrompt {
 				}
 				break;
 			case "use":
-				System.out.println("CASE: USE");
+//				System.out.println("CASE: USE");
 				useDatabase(userCommand);
 				break;
 			case "insert":
@@ -242,10 +242,11 @@ public class DBMSPrompt {
 						System.out.println("database "+dbName+" has not been created;");
 					}
 					else {
-						File matadataFile = new File(currentPath+ dbName+"\\matadata");
+						File metadataFile = new File(currentPath+ dbName+"\\metadata");
 						File dataFile = new File(currentPath+ dbName+"\\data");
-						Boolean mdSuccessFlag = matadataFile.mkdir();
+						Boolean mdSuccessFlag = metadataFile.mkdir();
 						Boolean dataSuccessFlag = dataFile.mkdir();
+						setCurrentDatabase(dbName);
 						if (mdSuccessFlag && dataSuccessFlag) {
 							System.out.println("database "+dbName+" is successfully created;");
 						}
@@ -263,6 +264,7 @@ public class DBMSPrompt {
 			}
 		}
 	}
+
 
 	
 	/**
@@ -315,12 +317,13 @@ public class DBMSPrompt {
 				FileUtils fu = new FileUtils();
 					try {
 					Boolean deleteFlag = fu.deleteRecursive(dbFile);
-					if (deleteFlag){
-						System.out.println("database "+dbName+" has been deleted successfully;");
-					}
-					else {
-						System.out.println("Cannot delete database "+dbName+";");
-					}
+						if (deleteFlag){
+							setCurrentDatabase("");
+							System.out.println("database "+dbName+" has been deleted successfully;");
+						}
+						else {
+							System.out.println("Cannot delete database "+dbName+";");
+						}
 					}
 					catch (Exception e) {
 						System.out.println("Exception "+e);
@@ -339,9 +342,37 @@ public class DBMSPrompt {
 	 *  @param useDBString is a String of the user input
 	 */
 	public static void useDatabase(String useDBString) {
-		System.out.println("STUB: This is the useDatabase method.");
-		System.out.println("\tParsing the string:\"" + useDBString + "\"");
+//		System.out.println("STUB: This is the useDatabase method.");
+//		System.out.println("\tParsing the string:\"" + useDBString + "\"");
+		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(useDBString.split(" ")));
+		if (commandTokens.size()==2) {
+			String dbName = commandTokens.get(1);
+			File dbFile = new File(currentPath+dbName);
+			boolean dbExist=dbFile.exists();
+			if (dbExist) {
+				setCurrentDatabase(dbName);
+				
+			}
+			else {
+				System.out.println("Unknown database "+dbName+";");
+			}
+		}
 	}
+	
+	/**
+	 *  Stub method for setting current database as working database
+	 *  @param dbName is a String of the user input
+	 */
+	public static void setCurrentDatabase(String dbName) {
+		if (dbName.equals("")) {
+			currentDatabasePath = "";
+		}
+		else {
+			currentDatabasePath = currentPath + dbName+"\\";
+		}
+	}
+
+
 	/**
 	 *  Stub method for creating new tables
 	 *  @param queryString is a String of the user input
