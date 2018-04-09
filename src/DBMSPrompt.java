@@ -22,6 +22,7 @@ public class DBMSPrompt {
 	static String version = "v1.01(example)";
 	static String copyright = "©2018 Nidhi Vaishnav";
 	static boolean isExit = false;
+	static String currentPath = System.getProperty("user.dir")+"\\database\\";
 
 	/*
 	 * Page size for alll files is 512 bytes by default.
@@ -154,7 +155,7 @@ public class DBMSPrompt {
 		*/
 		switch (commandTokens.get(0)) {
 			case "create":
-				System.out.println("CASE: CREATE");
+//				System.out.println("CASE: CREATE");
 				if (commandTokens.get(1).equals("database")){
 					parseCreateDatabase(userCommand);
 				}
@@ -163,8 +164,8 @@ public class DBMSPrompt {
 				}
 				break;
 			case "show":
-				System.out.println("CASE: SHOW");
-				if (commandTokens.get(1).equals("database")) {
+//				System.out.println("CASE: SHOW");
+				if (commandTokens.get(1).equals("databases")) {
 					parseShowDatabase(userCommand);
 				}
 				else {
@@ -226,13 +227,13 @@ public class DBMSPrompt {
 	public static void parseCreateDatabase(String createDBString) {
 //		System.out.println("STUB: This is the createDatabase method.");
 //		System.out.println("\tParsing the string:\"" + createDBString + "\"");
-		String currentPath = System.getProperty("user.dir");
+		
 		
 		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(createDBString.split(" ")));
 		if (commandTokens.size()==3) {
 			try {
 				String dbName = commandTokens.get(2);
-				File dbFile = new File(currentPath+ "\\database\\" +dbName);
+				File dbFile = new File(currentPath+dbName);
 				boolean dbExist=dbFile.exists();
 				
 				if (!dbExist) {
@@ -241,8 +242,8 @@ public class DBMSPrompt {
 						System.out.println("database "+dbName+" has not been created");
 					}
 					else {
-						File matadataFile = new File(currentPath+ "\\database\\" +dbName+"\\matadata");
-						File dataFile = new File(currentPath+ "\\database\\" +dbName+"\\data");
+						File matadataFile = new File(currentPath+ dbName+"\\matadata");
+						File dataFile = new File(currentPath+ dbName+"\\data");
 						Boolean mdSuccessFlag = matadataFile.mkdir();
 						Boolean dataSuccessFlag = dataFile.mkdir();
 						if (mdSuccessFlag && dataSuccessFlag) {
@@ -269,9 +270,31 @@ public class DBMSPrompt {
 	 *  @param createDBString is a String of the user input
 	 */
 	public static void parseShowDatabase(String createDBString) {
-		System.out.println("STUB: This is the parseShowDatabase method.");
-		System.out.println("\tParsing the string:\"" + createDBString + "\"");
+//		System.out.println("STUB: This is the parseShowDatabase method.");
+//		System.out.println("\tParsing the string:\"" + createDBString + "\"");
+		
+		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(createDBString.split(" ")));
+		if (commandTokens.size()==2) {
+			try {
+				File[] directories = new File(currentPath).listFiles(File::isDirectory);
+				System.out.println("---------------------");
+				System.out.println("Databases");
+				System.out.println("---------------------");
+
+				for (int x=0; x<directories.length; x++)
+				{
+					System.out.println(directories[x].getName());
+				}
+				System.out.println("---------------------");
+
+			}
+			catch(Exception e) {
+				System.out.println("Exception "+e);
+			}
+		}
 	}
+		
+	
 	/**
 	 *  Stub method for dropping database
 	 *  @param dropDBString is a String of the user input
