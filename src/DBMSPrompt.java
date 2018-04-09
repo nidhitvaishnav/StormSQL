@@ -239,7 +239,7 @@ public class DBMSPrompt {
 				if (!dbExist) {
 					Boolean dbSuccessFlag = dbFile.mkdir();
 					if (!dbSuccessFlag) {
-						System.out.println("database "+dbName+" has not been created");
+						System.out.println("database "+dbName+" has not been created;");
 					}
 					else {
 						File matadataFile = new File(currentPath+ dbName+"\\matadata");
@@ -247,15 +247,15 @@ public class DBMSPrompt {
 						Boolean mdSuccessFlag = matadataFile.mkdir();
 						Boolean dataSuccessFlag = dataFile.mkdir();
 						if (mdSuccessFlag && dataSuccessFlag) {
-							System.out.println("database "+dbName+" is successfully created.");
+							System.out.println("database "+dbName+" is successfully created;");
 						}
 						else {
-							System.out.println("matadata or data is not created");
+							System.out.println("matadata or data is not created;");
 						}
 					}
 				}
 				else {
-					System.out.println("Can't create database "+dbName+"; database already exists");
+					System.out.println("Can't create database "+dbName+"; database already exists;");
 				}
 			}
 			catch(Exception e){
@@ -292,6 +292,9 @@ public class DBMSPrompt {
 				System.out.println("Exception "+e);
 			}
 		}
+		else {
+			System.out.println("You have an error in your syntex right next to databases;");
+		}
 	}
 		
 	
@@ -300,8 +303,36 @@ public class DBMSPrompt {
 	 *  @param dropDBString is a String of the user input
 	 */
 	public static void dropDatabase(String dropDBString) {
-		System.out.println("STUB: This is the dropDatabase method.");
-		System.out.println("\tParsing the string:\"" + dropDBString + "\"");
+//		System.out.println("STUB: This is the dropDatabase method.");
+//		System.out.println("\tParsing the string:\"" + dropDBString + "\"");
+
+		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(dropDBString.split(" ")));
+		String dbName = commandTokens.get(2);
+		if (commandTokens.size()==3) {
+			File dbFile = new File(currentPath+dbName);
+			boolean dbExist=dbFile.exists();
+			if (dbExist) {
+				FileUtils fu = new FileUtils();
+					try {
+					Boolean deleteFlag = fu.deleteRecursive(dbFile);
+					if (deleteFlag){
+						System.out.println("database "+dbName+" has been deleted successfully;");
+					}
+					else {
+						System.out.println("Cannot delete database "+dbName+";");
+					}
+					}
+					catch (Exception e) {
+						System.out.println("Exception "+e);
+					}
+			}
+			else {
+				System.out.println("can't drop database '"+dbName+"', database does not exist;");
+			}
+		}
+		else {
+			System.out.println("You have an error in your syntex right next to databases;");
+		}
 	}
 	/**
 	 *  Stub method for dropping database
