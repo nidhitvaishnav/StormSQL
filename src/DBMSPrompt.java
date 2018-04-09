@@ -242,11 +242,37 @@ public class DBMSPrompt {
 						System.out.println("database "+dbName+" has not been created;");
 					}
 					else {
-						File metadataFile = new File(currentPath+ dbName+"\\metadata");
-						File dataFile = new File(currentPath+ dbName+"\\data");
+						File metadataFile = new File(currentPath+ dbName+"\\catalog");
+						File dataFile = new File(currentPath+ dbName+"\\user_data");
 						Boolean mdSuccessFlag = metadataFile.mkdir();
 						Boolean dataSuccessFlag = dataFile.mkdir();
 						setCurrentDatabase(dbName);
+						try {
+							RandomAccessFile tablesCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_tables.tbl", "rw");
+							/* Initially, the file is one page in length */
+							tablesCatalog.setLength(pageSize);
+							/* Set file pointer to the beginnning of the file */
+							tablesCatalog.seek(0);
+							tablesCatalog.close();
+						}
+						catch (Exception e) {
+							out.println("Unable to create the metadata_tables file");
+							out.println(e);
+						}
+
+						/** Create davisbase_columns systems catalog */
+						try {
+							RandomAccessFile columnsCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.tbl", "rw");
+							/** Initially the file is one page in length */
+							columnsCatalog.setLength(pageSize);
+							columnsCatalog.seek(0);       // Set file pointer to the beginnning of the file
+
+							columnsCatalog.close();
+						}
+						catch (Exception e) {
+							out.println("Unable to create the database_columns file");
+							out.println(e);
+						}
 						if (mdSuccessFlag && dataSuccessFlag) {
 							System.out.println("database "+dbName+" is successfully created;");
 						}
@@ -351,7 +377,6 @@ public class DBMSPrompt {
 			boolean dbExist=dbFile.exists();
 			if (dbExist) {
 				setCurrentDatabase(dbName);
-				
 			}
 			else {
 				System.out.println("Unknown database "+dbName+";");
