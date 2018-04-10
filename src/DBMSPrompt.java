@@ -247,16 +247,25 @@ public class DBMSPrompt {
 					else {
 						File metadataFile = new File(currentPath+ dbName+"\\catalog");
 						File dataFile = new File(currentPath+ dbName+"\\user_data");
+						
 						Boolean mdSuccessFlag = metadataFile.mkdir();
 						Boolean dataSuccessFlag = dataFile.mkdir();
 						setCurrentDatabase(dbName);
 						try {
 							RandomAccessFile tablesCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_tables.tbl", "rw");
+							RandomAccessFile tablesIndexCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_tables.indx", "rw");
+							
 //							/* Initially, the file is one page in length */
-//							tablesCatalog.setLength(pageSize);
+							tablesCatalog.setLength(pageSize);
 							/* Set file pointer to the beginnning of the file */
 							tablesCatalog.seek(0);
 							tablesCatalog.close();
+							
+							tablesIndexCatalog.seek(0);
+							tablesIndexCatalog.writeInt(0);
+							tablesIndexCatalog.writeLong(0);
+							tablesIndexCatalog.writeLong(0);
+							tablesIndexCatalog.close();
 						}
 						catch (Exception e) {
 							out.println("Unable to create the metadata_tables file");
@@ -266,11 +275,18 @@ public class DBMSPrompt {
 						/** Create davisbase_columns systems catalog */
 						try {
 							RandomAccessFile columnsCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.tbl", "rw");
-							/** Initially the file is one page in length */
-//							columnsCatalog.setLength(pageSize);
-							columnsCatalog.seek(0);       // Set file pointer to the beginnning of the file
+							RandomAccessFile columnsIndexCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.indx", "rw");
 
+							/** Initially the file is one page in length */
+							columnsCatalog.setLength(pageSize);
+							columnsCatalog.seek(0);       // Set file pointer to the beginnning of the file
 							columnsCatalog.close();
+							
+							columnsIndexCatalog.seek(0);
+							columnsIndexCatalog.writeInt(0);
+							columnsIndexCatalog.writeLong(0);
+							columnsIndexCatalog.writeLong(0);
+							columnsIndexCatalog.close();
 						}
 						catch (Exception e) {
 							out.println("Unable to create the database_columns file");
@@ -458,14 +474,36 @@ public class DBMSPrompt {
 		 */
 		 //make an entry in catalog table file
 		String catalogTableFilePath = currentDatabasePath+"catalog\\metadata_tables.tbl";
+		String catalogTableIndexFilePath = currentDatabasePath+"catalog\\metadata_tables.indx";
+		
 		try {
 	        RandomAccessFile catalogTableFile =  new RandomAccessFile(catalogTableFilePath, "rw");
-	        catalogTableFile.seek(catalogTableFile.length());
-	        catalogTableFile.writeByte(0);
+	        RandomAccessFile catalogTableIndexFile = new RandomAccessFile(catalogTableIndexFilePath, "rw");
+	        long indexFileLen = catalogTableIndexFile.length();
+	        catalogTableIndexFile.seek(indexFileLen-20);
+	        int rowId = catalogTableIndexFile.readInt();	        
+	        catalogTableIndexFile.seek(indexFileLen-16);
+	        long startIndex = catalogTableIndexFile.readLong();
+	        catalogTableIndexFile.seek(indexFileLen-8);
+	        long endIndex = catalogTableIndexFile.readLong();
+	        
+	        System.out.println("indexFileLen: "+indexFileLen+"; rowId: "+rowId+"; startIndex: "+startIndex+"endIndex: "+endIndex); 
+	        catalogTableFile.seek(endIndex);
+	        catalogTableIndexFile.seek(indexFileLen);
+	        //writing row id
+	        catalogTableIndexFile.writeInt(rowId+1);
+	        catalogTableFile.writeInt(rowId+1);
+	        //writing size of table length
 	        catalogTableFile.writeByte(tableName.length());
+	        //writing table name
 	        catalogTableFile.writeBytes(tableName);
-	        catalogTableFile.writeInt(0);
+	        
+	        catalogTableIndexFile.writeLong(endIndex);
+	        catalogTableIndexFile.writeLong(catalogTableFile.getFilePointer());
+	        System.out.println("updated start index"+endIndex+"; endIndex: "+catalogTableFile.getFilePointer());
+	        //
 	        catalogTableFile.close();	
+	        
 	        System.out.println("Catalog table is updated");
 		}
 		catch (Exception e) {
@@ -475,6 +513,63 @@ public class DBMSPrompt {
 		 *  for each column in the new table 
 		 *  i.e. database catalog meta-data 
 		 */
+		ArrayList<String> ColumnTokens = new ArrayList<String>(Arrays.asList(columnStr.split(",")));
+		System.out.println(ColumnTokens.toString());
+		
+		
+		String catalogColumnFilePath = currentDatabasePath+"catalog\\metadata_tables.tbl";
+//		try {
+//	        RandomAccessFile catalogColumnFile =  new RandomAccessFile(catalogColumnFilePath, "rw");
+//	        for Columntoken
+//	        
+//	        
+//	        catalogColumnFile.seek(catalogColumnFile.length());
+//	        
+//	        catalogColumnFile.seek(catalogColumnFile.length());
+//	        catalogColumnFile.writeByte(0);
+//	        catalogColumnFile.writeByte(tableName.length());
+//	        catalogColumnFile.writeBytes(tableName);
+//	        catalogColumnFile.writeInt(0);
+//	        catalogColumnFile.close();	
+//	        System.out.println("Catalog table is updated");
+//		}
+//		catch (Exception e) {
+//			e.printStackTrace();
+//		}
+//		
+		
+		
+		
+	}
+
+	
+	/**
+	 *  Stub method to check the datatype of the string and return appropriate serial code
+	 *  @param dataType is a String of the user input
+	 */
+
+	public static long getSerialCode(String dataTypeName) {
+        long serialCode=0xFF;
+		if (dataTypeName.equalsIgnoreCase("int")) {
+            serialCode = 0x06;
+        } else if (dataTypeName.equalsIgnoreCase("tinyint")) {
+            serialCode = 0x04;
+        } else if (dataTypeName.equalsIgnoreCase("bigint")) {
+            serialCode = 0x07;
+        } else if (dataTypeName.equalsIgnoreCase("smallint")) {
+            serialCode = 0x05;
+        } else if (dataTypeName.equalsIgnoreCase("real")) {
+            serialCode = 0x08;
+        } else if (dataTypeName.equalsIgnoreCase("double")) {
+            serialCode = 0x09;
+        } else if (dataTypeName.equalsIgnoreCase("datetime")) {
+            serialCode = 0x0A;
+        } else if (dataTypeName.equalsIgnoreCase("date")) {
+            serialCode = 0x0B;
+        } else if (dataTypeName.equalsIgnoreCase("text")) {
+            serialCode = 0x0C;
+        }
+        return serialCode;
 	}
 	
 	/**
