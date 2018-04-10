@@ -159,8 +159,11 @@ public class DBMSPrompt {
 				if (commandTokens.get(1).equals("database")){
 					parseCreateDatabase(userCommand);
 				}
-				else{
+				else if(commandTokens.get(1).equals("table")) {
 					parseCreateTable(userCommand);
+				}
+				else {
+					System.out.println("I didn't understand the command: \"" + userCommand + "\"");
 				}
 				break;
 			case "show":
@@ -249,29 +252,29 @@ public class DBMSPrompt {
 						setCurrentDatabase(dbName);
 						try {
 							RandomAccessFile tablesCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_tables.tbl", "rw");
-							/* Initially, the file is one page in length */
-							tablesCatalog.setLength(pageSize);
+//							/* Initially, the file is one page in length */
+//							tablesCatalog.setLength(pageSize);
 							/* Set file pointer to the beginnning of the file */
 							tablesCatalog.seek(0);
 							tablesCatalog.close();
 						}
 						catch (Exception e) {
 							out.println("Unable to create the metadata_tables file");
-							out.println(e);
+							e.printStackTrace();
 						}
 
 						/** Create davisbase_columns systems catalog */
 						try {
 							RandomAccessFile columnsCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.tbl", "rw");
 							/** Initially the file is one page in length */
-							columnsCatalog.setLength(pageSize);
+//							columnsCatalog.setLength(pageSize);
 							columnsCatalog.seek(0);       // Set file pointer to the beginnning of the file
 
 							columnsCatalog.close();
 						}
 						catch (Exception e) {
 							out.println("Unable to create the database_columns file");
-							out.println(e);
+							e.printStackTrace();
 						}
 						if (mdSuccessFlag && dataSuccessFlag) {
 							System.out.println("database "+dbName+" is successfully created;");
@@ -286,7 +289,7 @@ public class DBMSPrompt {
 				}
 			}
 			catch(Exception e){
-				System.out.println("Exception "+e);
+				e.printStackTrace();
 			}
 		}
 	}
@@ -317,7 +320,7 @@ public class DBMSPrompt {
 
 			}
 			catch(Exception e) {
-				System.out.println("Exception "+e);
+				e.printStackTrace();
 			}
 		}
 		else {
@@ -352,7 +355,7 @@ public class DBMSPrompt {
 						}
 					}
 					catch (Exception e) {
-						System.out.println("Exception "+e);
+						e.printStackTrace();
 					}
 			}
 			else {
@@ -404,38 +407,95 @@ public class DBMSPrompt {
 	 */
 	public static void parseCreateTable(String createTableString) {
 		
-		System.out.println("STUB: Calling your method to create a table");
-		System.out.println("Parsing the string:\"" + createTableString + "\"");
+//		System.out.println("STUB: Calling your method to create a table");
+//		System.out.println("Parsing the string:\"" + createTableString + "\"");
+		
+		if (currentDatabasePath.equals("")) {
+			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			return;
+		}
 		ArrayList<String> createTableTokens = new ArrayList<String>(Arrays.asList(createTableString.split(" ")));
 
+		System.out.println(createTableTokens.toString());
 		/* Define table file name */
-		String tableFileName = createTableTokens.get(2) + ".tbl";
 
-		/* YOUR CODE GOES HERE */
+		String tableName = "";
+		
+		String tempTableName = createTableTokens.get(2);
+		if (createTableTokens.get(2).contains("(")) {
+			tableName = tempTableName.substring(0, tempTableName.indexOf("("));		
+		}
+		else {
+			tableName = createTableTokens.get(2);
+		}
+		String tableFileName = tableName+".tbl";
+		String columnStr = createTableString.substring(createTableString.indexOf("(")+1, createTableString.indexOf(")"));
+		System.out.println(columnStr);
+		
+		String tableFilePath = currentDatabasePath+"user_data\\"+tableFileName;
+		
+		if (tableExists(tableFilePath)) {
+			System.out.println("Table "+tableFileName+" already exist;");
+			return;
+		}
 		
 		/*  Code to create a .tbl file to contain table data */
 		try {
 			/*  Create RandomAccessFile tableFile in read-write mode.
 			 *  Note that this doesn't create the table file in the correct directory structure
 			 */
-			RandomAccessFile tableFile = new RandomAccessFile(tableFileName, "rw");
+			RandomAccessFile tableFile = new RandomAccessFile(tableFilePath, "rw");
 			tableFile.setLength(pageSize);
 			tableFile.seek(0);
-			tableFile.writeInt(63);
+
 		}
 		catch(Exception e) {
-			System.out.println(e);
+			e.printStackTrace();
 		}
 		
 		/*  Code to insert a row in the davisbase_tables table 
 		 *  i.e. database catalog meta-data 
 		 */
-		
+		 //make an entry in catalog table file
+		String catalogTableFilePath = currentDatabasePath+"catalog\\metadata_tables.tbl";
+		try {
+	        RandomAccessFile catalogTableFile =  new RandomAccessFile(catalogTableFilePath, "rw");
+	        catalogTableFile.seek(catalogTableFile.length());
+	        catalogTableFile.writeByte(0);
+	        catalogTableFile.writeByte(tableName.length());
+	        catalogTableFile.writeBytes(tableName);
+	        catalogTableFile.writeInt(0);
+	        catalogTableFile.close();	
+	        System.out.println("Catalog table is updated");
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
 		/*  Code to insert rows in the davisbase_columns table  
 		 *  for each column in the new table 
 		 *  i.e. database catalog meta-data 
 		 */
 	}
+	
+	/**
+	 *  Stub method to check whether table exist
+	 *  @param showTableStr is a String of the user input
+	 */
+	public static boolean tableExists(String filePath) {
+		boolean existFlag = false;
+		try {
+			File f= new File(filePath);
+			
+			if (f.exists() && !f.isDirectory()) {
+				existFlag=true;
+			}
+		}
+		catch(Exception e){
+			e.printStackTrace();
+		}
+		return existFlag;
+	}
+	
 	/**
 	 *  Stub method for displaying table
 	 *  @param showTableStr is a String of the user input
