@@ -478,8 +478,8 @@ public class DBMSPrompt {
 		}
 		
 		String tableFilePath = currentDatabasePath+"user_data\\"+tableFileName;
-		
-		if (tableExists(tableFilePath)) {
+		FileUtils fu = new FileUtils();
+		if (fu.tableExists(tableFilePath)) {
 			System.out.println("Table "+tableFileName+" already exist;");
 			return;
 		}
@@ -495,7 +495,7 @@ public class DBMSPrompt {
 	        int nCols = 2;
 	        
 	        /*Page pointer for the next page; no next page : -1*/
-			int row_id = getRow_id(catalogTableFile);
+			int row_id = fu.getRow_id(catalogTableFile);
 	        
 	        /*getting size of current data*/
 	        Records[] tableData= new Records[nCols];
@@ -528,7 +528,7 @@ public class DBMSPrompt {
 			
 			int nCols = 6;
 	        /*Page pointer for the next page; no next page : -1*/
-			int row_id = getRow_id(catalogColumnFile);
+			int row_id = fu.getRow_id(catalogColumnFile);
 	        /*getting size of current data*/
 	        Records[] tableData= new Records[nCols];
 
@@ -572,7 +572,7 @@ public class DBMSPrompt {
 				
 				nCols = 6;
 		        /*Page pointer for the next page; no next page : -1*/
-				row_id = getRow_id(catalogColumnFile);
+				row_id = fu.getRow_id(catalogColumnFile);
 		        /*getting size of current data*/
 		        tableData= new Records[nCols];
 
@@ -607,18 +607,18 @@ public class DBMSPrompt {
         /*1 to define number of columns;
          * nCols contains serial codes of all the columns
          * */
-		
+		FileUtils fu = new FileUtils();
 		try {
 			/*Page pointer for the next page; no next page : -1*/
-			long pagePointer = getPagePointer(file);
+			long pagePointer = fu.getPagePointer(file);
 			
 	        /*get the total cell in the page*/
-			int nCellInPage = getnCellInFile(file, pagePointer);
+			int nCellInPage = fu.getnCellInFile(file, pagePointer);
 	        
 	        System.out.println("nCellInPage: "+nCellInPage);
 	       
 	        /*Get the offset of last element*/
-	        int lastRecordLoc = getoffset(file, pagePointer);
+	        int lastRecordLoc = fu.getoffset(file, pagePointer);
 	        if (lastRecordLoc==-99 ) {
 	        	System.out.println("Error in table creation");
 	        }
@@ -626,7 +626,7 @@ public class DBMSPrompt {
 	        System.out.println("last record loc: "+lastRecordLoc);
 	        
 	        /*get offset of this index*/
-	        long indexWriteLoc = getIndexOffset(nCellInPage, pagePointer);
+	        long indexWriteLoc = fu.getIndexOffset(nCellInPage, pagePointer);
 	        
 	        System.out.println("index write loc: "+indexWriteLoc);
 			
@@ -651,16 +651,16 @@ public class DBMSPrompt {
 				/*updating page pointer*/
 				pagePointer = newPagePointer;
 				System.out.println(pagePointer);
-				nCellInPage = getnCellInFile(file, pagePointer);
-				lastRecordLoc = getoffset(file, pagePointer);
-				indexWriteLoc = getIndexOffset(nCellInPage, pagePointer);
+				nCellInPage = fu.getnCellInFile(file, pagePointer);
+				lastRecordLoc = fu.getoffset(file, pagePointer);
+				indexWriteLoc = fu.getIndexOffset(nCellInPage, pagePointer);
 				writeLoc = (lastRecordLoc-totalBytes);
 	        }
 	        
 	        /*Updating nCellInPage*/
-	        setnCellInFile(file, pagePointer, nCellInPage);
-	        setStartOfContent(file, pagePointer, (int)writeLoc);
-	        setIndexOffset(file, indexWriteLoc, (int)writeLoc);
+	        fu.setnCellInFile(file, pagePointer, nCellInPage);
+	        fu.setStartOfContent(file, pagePointer, (int)writeLoc);
+	        fu.setIndexOffset(file, indexWriteLoc, (int)writeLoc);
 	        
 			/*Writing record data in file*/
 	        file.seek(writeLoc);
@@ -693,152 +693,6 @@ public class DBMSPrompt {
 		}
 	}
 	
-	public static long getPagePointer(RandomAccessFile file){
-		int locInPage = 4;
-		long pagePointer = 0;
-		int nPage=0;
-		try {
-			file.seek(locInPage);
-			pagePointer = file.readInt();
-			while (pagePointer!=-1) {
-				nPage+=1;
-				long currentLoc = nPage*pageSize+locInPage;
-				file.seek(currentLoc);
-				pagePointer = file.readInt();
-			}
-		}
-		catch (IOException e) {	
-			e.printStackTrace();
-		}
-		return nPage*pageSize;
-	}
-	
-	
-	public static int getRow_id(RandomAccessFile file) {
-		int pointerLocInPage = 4;
-		int rowLocInPage = 1;
-		long pagePointer = 0;
-		int nPage=0;
-		int totalRecord = 0;
-		int pageRecord = 0;
-		try {
-			file.seek(pointerLocInPage);
-			pagePointer = file.readInt();
-			file.seek(rowLocInPage);
-			pageRecord = file.readByte();
-			totalRecord+=pageRecord;
-			while (pagePointer!=-1) {
-				nPage+=1;
-				long currentPointerLoc = nPage*pageSize+pointerLocInPage;
-				file.seek(currentPointerLoc);
-				pagePointer = file.readInt();
-				long currentRecordLoc = nPage*pageSize + rowLocInPage;
-				
-				file.seek(rowLocInPage);
-				pageRecord = file.readByte();
-				totalRecord+=pageRecord;
-			}
-		}
-		catch (IOException e) {	
-			e.printStackTrace();
-		}
-		return totalRecord+1;
-	}
-	
-
-	/**
-	 *  Stub method to check the datatype of the string and return appropriate serial code
-	 *  @param file is a RandomAccessFile of the user input
-	 */
-	public static int getnCellInFile(RandomAccessFile file, long pagePointer) {
-		int nCell = -1;
-		try {
-			file.seek(pagePointer+1);
-			nCell = file.readByte();
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}
-		return nCell;
-	}
-	
-	public static void setnCellInFile(RandomAccessFile file, long pagePointer, int currentCell) {
-		try {
-			System.out.println("Inside setnCellInFile(); pagepointer: "+pagePointer);
-			file.seek(pagePointer+1);
-			int updatedCurrentCell = currentCell+1;
-			file.writeByte(updatedCurrentCell);
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}
-		
-	}
-	public static void setStartOfContent(RandomAccessFile file, long pagePointer, int writeLoc) {
-		try {
-			file.seek(pagePointer+2);
-			file.writeShort(writeLoc);
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}
-	}
-
-	
-	public static int getoffset(RandomAccessFile file, long pagePointer) {
-		int offset = -99;
-		try {
-			file.seek(pagePointer+ 2);
-			offset = file.readShort();
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}
-		
-		return offset;
-	}
-	
-	public static long getIndexOffset(int nCell, long pagePointer) {
-	
-		/*skipping cell to write indexOffset:
-		 * First 8 bytes for page offset and nCell and all
-		 * From 8th byte we are starting to write index
-		 * Now the location of our new index: 8+nCell*2 
-		 */
-		long indexOffset = pagePointer+ 8+2*nCell;
-		return indexOffset;
-	}
-	
-	public static void setIndexOffset(RandomAccessFile file, long indexWriteLoc, int writeLoc) {
-		try {
-			file.seek(indexWriteLoc);
-			file.writeShort(writeLoc);
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-	}
-	
-	
-	/**
-	 *  Stub method to check whether table exist
-	 *  @param showTableStr is a String of the user input
-	 */
-	public static boolean tableExists(String filePath) {
-		boolean existFlag = false;
-		try {
-			File f= new File(filePath);
-			
-			if (f.exists() && !f.isDirectory()) {
-				existFlag=true;
-			}
-		}
-		catch(Exception e){
-			e.printStackTrace();
-		}
-		return existFlag;
-	}
 	
 	/**
 	 *  Stub method for displaying table
