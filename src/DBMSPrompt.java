@@ -157,10 +157,10 @@ public class DBMSPrompt {
 		switch (commandTokens.get(0)) {
 			case "create":
 //				System.out.println("CASE: CREATE");
-				if (commandTokens.get(1).equals("database")){
+				if (commandTokens.get(1).equalsIgnoreCase("database")){
 					parseCreateDatabase(userCommand);
 				}
-				else if(commandTokens.get(1).equals("table")) {
+				else if(commandTokens.get(1).equalsIgnoreCase("table")) {
 					parseCreateTable(userCommand);
 				}
 				else {
@@ -169,20 +169,26 @@ public class DBMSPrompt {
 				break;
 			case "show":
 //				System.out.println("CASE: SHOW");
-				if (commandTokens.get(1).equals("databases")) {
+				if (commandTokens.get(1).equalsIgnoreCase("databases")) {
 					parseShowDatabase(userCommand);
 				}
-				else {
+				else if(commandTokens.get(1).equalsIgnoreCase("tables")) {
 					parseShowTable(userCommand);
+				}
+				else {
+					System.out.println("I didn't understand the command: \"" + userCommand + "\"");					
 				}
 				break;
 			case "drop":
 //				System.out.println("CASE: DROP");
-				if (commandTokens.get(1).equals("database")) {
+				if (commandTokens.get(1).equalsIgnoreCase("database")) {
 					dropDatabase(userCommand);
 				}
-				else {
+				else if(commandTokens.get(1).equalsIgnoreCase("table")) {
 					dropTable(userCommand);
+				}
+				else {
+					System.out.println("I didn't understand the command: \"" + userCommand + "\"");					
 				}
 				break;
 			case "use":
@@ -839,8 +845,39 @@ public class DBMSPrompt {
 	 *  @param showTableStr is a String of the user input
 	 */
 	public static void parseShowTable(String showTableStr) {
-		System.out.println("STUB: This is the showTable method.");
-		System.out.println("\tParsing the string:\"" + showTableStr + "\"");
+//		System.out.println("STUB: This is the showTable method.");
+//		System.out.println("\tParsing the string:\"" + showTableStr + "\"");
+		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(showTableStr.split(" ")));
+		
+//		int pos = currentDatabasePath.lastIndexOf("/") + 1;
+//		currentDatabasePath.substring(pos, path.length()-pos);
+		
+		String dbName = new File(currentDatabasePath).getName();
+		
+		if (commandTokens.size()==2) {
+			try {
+				File[] tblFiles = new File(currentDatabasePath+"user_data\\" ).listFiles(File :: isFile);
+				System.out.println("---------------------");
+				System.out.println("Tables in "+dbName);
+				System.out.println("---------------------");
+
+				for (int x=0; x<tblFiles.length; x++)
+				{	
+					int dotPos = tblFiles[x].getName().indexOf(".");
+					String tableName = tblFiles[x].getName().substring(0, dotPos);
+					System.out.println(tableName);
+				}
+				System.out.println("---------------------");
+
+			}
+			catch(Exception e) {
+				e.printStackTrace();
+			}
+		}
+		else {
+			System.out.println("You have an error in your syntex right next to databases;");
+		}
+		
 	}
 
 	/**
