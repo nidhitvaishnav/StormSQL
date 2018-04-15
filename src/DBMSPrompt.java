@@ -255,6 +255,7 @@ public class DBMSPrompt {
 						try {
 							RandomAccessFile tablesCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_tables.tbl", "rw");
 							createTableFile(tablesCatalog, 0);
+							tablesCatalog.close();
 						}
 						catch (Exception e) {
 							out.println("Unable to create the metadata_tables file");
@@ -265,6 +266,7 @@ public class DBMSPrompt {
 						try {
 							RandomAccessFile columnsCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.tbl", "rw");
 							createTableFile(columnsCatalog, 0);
+							columnsCatalog.close();
 						}
 						catch (Exception e) {
 							out.println("Unable to create the metadata_columns file");
@@ -415,7 +417,6 @@ public class DBMSPrompt {
 			file.writeShort(startWriteLoc);
 			/*Page pointer for the next page; no next page : -1*/
 			file.writeInt(-1);
-			file.close();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -450,7 +451,14 @@ public class DBMSPrompt {
 			tableName = createTableTokens.get(2);
 		}
 		String tableFileName = tableName+".tbl";
-		String columnStr = createTableString.substring(createTableString.indexOf("(")+1, createTableString.indexOf(")"));
+		String columnStr = "";
+		try {
+		columnStr = createTableString.substring(createTableString.indexOf("(")+1, createTableString.indexOf(")"));
+		}
+		catch(Exception e) {
+			System.out.println("Error: A table must have atleast 1 column;");
+			return;
+		}
 		System.out.println(columnStr);
 		
 		String tableFilePath = currentDatabasePath+"user_data\\"+tableFileName;
@@ -467,6 +475,7 @@ public class DBMSPrompt {
 			 */
 			RandomAccessFile tableFile = new RandomAccessFile(tableFilePath, "rw");
 			createTableFile(tableFile, 0);
+			tableFile.close();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -483,12 +492,7 @@ public class DBMSPrompt {
 	        int nCols = 2;
 	        
 	        /*Page pointer for the next page; no next page : -1*/
-			long pagePointer = getPagePointer(catalogTableFile);
-			
-	        /*get the total cell in the page*/
-			int nCellInPage = getnCellInFile(catalogTableFile, pagePointer);
-	        //TODO: FIND A WAY TO GET ROW_ID THIS IS PAGE_ROW_ID, NOT ACTUAL ROW ID
-			int row_id = nCellInPage+1;
+			int row_id = getRow_id(catalogTableFile);
 	        
 	        /*getting size of current data*/
 	        Records[] tableData= new Records[nCols];
@@ -501,9 +505,6 @@ public class DBMSPrompt {
 	        
 	        
 	        
-	        
-	        catalogTableFile.seek(1);
-	        catalogTableFile.writeByte(row_id);
 	        
 	        
 	        
@@ -590,7 +591,8 @@ public class DBMSPrompt {
 					long fileSize = file.length();
 					createTableFile(file, fileSize);
 					/*updating page pointer*/
-					pagePointer = getPagePointer(file);
+					pagePointer = newPagePointer;
+					System.out.println(pagePointer);
 					nCellInPage = getnCellInFile(file, pagePointer);
 					lastRecordLoc = getoffset(file, pagePointer);
 					indexWriteLoc = getIndexOffset(nCellInPage, pagePointer);
@@ -652,13 +654,46 @@ public class DBMSPrompt {
 		}
 		return nPage*pageSize;
 	}
+	
+	
+	public static int getRow_id(RandomAccessFile file) {
+		int pointerLocInPage = 4;
+		int rowLocInPage = 1;
+		long pagePointer = 0;
+		int nPage=0;
+		int totalRecord = 0;
+		int pageRecord = 0;
+		try {
+			file.seek(pointerLocInPage);
+			pagePointer = file.readInt();
+			file.seek(rowLocInPage);
+			pageRecord = file.readByte();
+			totalRecord+=pageRecord;
+			while (pagePointer!=-1) {
+				nPage+=1;
+				long currentPointerLoc = nPage*pageSize+pointerLocInPage;
+				file.seek(currentPointerLoc);
+				pagePointer = file.readInt();
+				long currentRecordLoc = nPage*pageSize + rowLocInPage;
+				
+				file.seek(rowLocInPage);
+				pageRecord = file.readByte();
+				totalRecord+=pageRecord;
+			}
+		}
+		catch (IOException e) {	
+			e.printStackTrace();
+		}
+		return totalRecord+1;
+	}
+	
 
 	/**
 	 *  Stub method to check the datatype of the string and return appropriate serial code
 	 *  @param file is a RandomAccessFile of the user input
 	 */
 	public static int getnCellInFile(RandomAccessFile file, long pagePointer) {
-		int nCell = 0;
+		int nCell = -1;
 		try {
 			file.seek(pagePointer+1);
 			nCell = file.readByte();
@@ -671,6 +706,7 @@ public class DBMSPrompt {
 	
 	public static void setnCellInFile(RandomAccessFile file, long pagePointer, int currentCell) {
 		try {
+			System.out.println("Inside setnCellInFile(); pagepointer: "+pagePointer);
 			file.seek(pagePointer+1);
 			int updatedCurrentCell = currentCell+1;
 			file.writeByte(updatedCurrentCell);
