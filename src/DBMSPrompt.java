@@ -1,6 +1,7 @@
 import java.io.RandomAccessFile;
 import java.io.File;
 import java.io.FileReader;
+import java.io.IOException;
 import java.util.Scanner;
 import java.util.SortedMap;
 import java.util.ArrayList;
@@ -253,19 +254,7 @@ public class DBMSPrompt {
 						setCurrentDatabase(dbName);
 						try {
 							RandomAccessFile tablesCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_tables.tbl", "rw");
-							RandomAccessFile tablesIndexCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_tables.indx", "rw");
-							
-//							/* Initially, the file is one page in length */
-							tablesCatalog.setLength(pageSize);
-							/* Set file pointer to the beginnning of the file */
-							tablesCatalog.seek(0);
-							tablesCatalog.close();
-							
-							tablesIndexCatalog.seek(0);
-							tablesIndexCatalog.writeInt(0);
-							tablesIndexCatalog.writeLong(0);
-							tablesIndexCatalog.writeLong(0);
-							tablesIndexCatalog.close();
+							createTableFile(tablesCatalog, 0);
 						}
 						catch (Exception e) {
 							out.println("Unable to create the metadata_tables file");
@@ -275,21 +264,10 @@ public class DBMSPrompt {
 						/** Create davisbase_columns systems catalog */
 						try {
 							RandomAccessFile columnsCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.tbl", "rw");
-							RandomAccessFile columnsIndexCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.indx", "rw");
-
-							/** Initially the file is one page in length */
-							columnsCatalog.setLength(pageSize);
-							columnsCatalog.seek(0);       // Set file pointer to the beginnning of the file
-							columnsCatalog.close();
-							
-							columnsIndexCatalog.seek(0);
-							columnsIndexCatalog.writeInt(0);
-							columnsIndexCatalog.writeLong(0);
-							columnsIndexCatalog.writeLong(0);
-							columnsIndexCatalog.close();
+							createTableFile(columnsCatalog, 0);
 						}
 						catch (Exception e) {
-							out.println("Unable to create the database_columns file");
+							out.println("Unable to create the metadata_columns file");
 							e.printStackTrace();
 						}
 						if (mdSuccessFlag && dataSuccessFlag) {
@@ -416,7 +394,34 @@ public class DBMSPrompt {
 		}
 	}
 
+	/**
+	 *  Stub method for creating new tables
+	 *  @param file is a RandomAccessFile of the user input
+	 */
 
+	public static void createTableFile(RandomAccessFile file, long currentFileSize) {
+		try {
+    
+			/* Initially, the file is one page in length */
+			file.setLength(pageSize+currentFileSize);
+			/* Set file pointer to the beginnning of the file */
+			file.seek(0+currentFileSize);
+			/*Page is a leaf page*/
+			file.writeByte(13);
+			/*Number of cells*/
+			file.writeByte(0);
+			/*start writing at location from bottom*/
+			int startWriteLoc = (int) ((pageSize+currentFileSize)-1);
+			file.writeShort(startWriteLoc);
+			/*Page pointer for the next page; no next page : -1*/
+			file.writeInt(-1);
+			file.close();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
 	/**
 	 *  Stub method for creating new tables
 	 *  @param queryString is a String of the user input
@@ -461,9 +466,7 @@ public class DBMSPrompt {
 			 *  Note that this doesn't create the table file in the correct directory structure
 			 */
 			RandomAccessFile tableFile = new RandomAccessFile(tableFilePath, "rw");
-			tableFile.setLength(pageSize);
-			tableFile.seek(0);
-
+			createTableFile(tableFile, 0);
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -474,35 +477,36 @@ public class DBMSPrompt {
 		 */
 		 //make an entry in catalog table file
 		String catalogTableFilePath = currentDatabasePath+"catalog\\metadata_tables.tbl";
-		String catalogTableIndexFilePath = currentDatabasePath+"catalog\\metadata_tables.indx";
 		
 		try {
 	        RandomAccessFile catalogTableFile =  new RandomAccessFile(catalogTableFilePath, "rw");
-	        RandomAccessFile catalogTableIndexFile = new RandomAccessFile(catalogTableIndexFilePath, "rw");
-	        long indexFileLen = catalogTableIndexFile.length();
-	        catalogTableIndexFile.seek(indexFileLen-20);
-	        int rowId = catalogTableIndexFile.readInt();	        
-	        catalogTableIndexFile.seek(indexFileLen-16);
-	        long startIndex = catalogTableIndexFile.readLong();
-	        catalogTableIndexFile.seek(indexFileLen-8);
-	        long endIndex = catalogTableIndexFile.readLong();
+	        int nCols = 2;
 	        
-	        System.out.println("indexFileLen: "+indexFileLen+"; rowId: "+rowId+"; startIndex: "+startIndex+"endIndex: "+endIndex); 
-	        catalogTableFile.seek(endIndex);
-	        catalogTableIndexFile.seek(indexFileLen);
-	        //writing row id
-	        catalogTableIndexFile.writeInt(rowId+1);
-	        catalogTableFile.writeInt(rowId+1);
-	        //writing size of table length
-	        catalogTableFile.writeByte(tableName.length());
-	        //writing table name
-	        catalogTableFile.writeBytes(tableName);
+	        /*Page pointer for the next page; no next page : -1*/
+			long pagePointer = getPagePointer(catalogTableFile);
+			
+	        /*get the total cell in the page*/
+			int nCellInPage = getnCellInFile(catalogTableFile, pagePointer);
+	        //TODO: FIND A WAY TO GET ROW_ID THIS IS PAGE_ROW_ID, NOT ACTUAL ROW ID
+			int row_id = nCellInPage+1;
 	        
-	        catalogTableIndexFile.writeLong(endIndex);
-	        catalogTableIndexFile.writeLong(catalogTableFile.getFilePointer());
-	        System.out.println("updated start index"+endIndex+"; endIndex: "+catalogTableFile.getFilePointer());
-	        //
-	        catalogTableFile.close();	
+	        /*getting size of current data*/
+	        Records[] tableData= new Records[nCols];
+	        tableData[0] =	new Records(Integer.toString(row_id), "int");
+	        tableData[1] = new Records(tableName, "text");
+	        
+	        writeRecordsInFile(catalogTableFile ,tableData, nCols);
+
+	        
+	        
+	        
+	        
+	        
+	        catalogTableFile.seek(1);
+	        catalogTableFile.writeByte(row_id);
+	        
+	        
+	        
 	        
 	        System.out.println("Catalog table is updated");
 		}
@@ -537,40 +541,191 @@ public class DBMSPrompt {
 //			e.printStackTrace();
 //		}
 //		
+			
+	}
+	
+	public static void writeRecordsInFile(RandomAccessFile file ,Records[] tableData, int nCols) {
+        /*1 to define number of columns;
+         * nCols contains serial codes of all the columns
+         * */
 		
+		try {
+			/*Page pointer for the next page; no next page : -1*/
+			long pagePointer = getPagePointer(file);
+			
+	        /*get the total cell in the page*/
+			int nCellInPage = getnCellInFile(file, pagePointer);
+	        
+	        System.out.println("nCellInPage: "+nCellInPage);
+	       
+	        /*Get the offset of last element*/
+	        int lastRecordLoc = getoffset(file, pagePointer);
+	        if (lastRecordLoc==-99 ) {
+	        	System.out.println("Error in table creation");
+	        }
+	        
+	        System.out.println("last record loc: "+lastRecordLoc);
+	        
+	        /*get offset of this index*/
+	        long indexWriteLoc = getIndexOffset(nCellInPage, pagePointer);
+	        
+	        System.out.println("index write loc: "+indexWriteLoc);
+			
+	        int totalBytes=1+nCols;
+	        for (int i = 0; i<nCols; i++) {
+	        	totalBytes+=tableData[i].nByte;
+	        }
+	        
+	        /* If page is full, than add a new page*/
+	        long nPage=1;
+	        
+	        long writeLoc = (lastRecordLoc-totalBytes);
+	        
+	        if ((indexWriteLoc+2) > writeLoc) {
+	        		/* updating page pointer from -1 to next page pointer*/
+					file.seek(pagePointer+4);
+					int newPagePointer =  (int) (pagePointer+pageSize);
+					file.writeInt(newPagePointer);
+					/* adding a new page*/
+					long fileSize = file.length();
+					createTableFile(file, fileSize);
+					/*updating page pointer*/
+					pagePointer = getPagePointer(file);
+					nCellInPage = getnCellInFile(file, pagePointer);
+					lastRecordLoc = getoffset(file, pagePointer);
+					indexWriteLoc = getIndexOffset(nCellInPage, pagePointer);
+					writeLoc = (lastRecordLoc-totalBytes);
+	        }
+	        
+	        /*Updating nCellInPage*/
+	        setnCellInFile(file, pagePointer, nCellInPage);
+	        setStartOfContent(file, pagePointer, (int)writeLoc);
+	        setIndexOffset(file, indexWriteLoc, (int)writeLoc);
+	        
+			/*Writing record data in file*/
+	        file.seek(writeLoc);
+	        file.writeByte(nCols);
+	        /*writing the serialCode of all the records */
+	        for (int i=0; i<tableData.length; i++) {
+	        	file.writeByte(tableData[i].serialCode);
+	        }
+	        for (int i=0; i<tableData.length; i++) {
+	        	if (tableData[i].serialCode==0x00 || tableData[i].serialCode==0x04) {
+	        		file.writeByte((int)tableData[i].data);
+	        	}
+	        	else if (tableData[i].serialCode==0x01 || tableData[i].serialCode==0x05) {
+	        		file.writeShort((int)tableData[i].data);
+	        	}
+	        	else if (tableData[i].serialCode==0x02 || tableData[i].serialCode==0x06 || tableData[i].serialCode==0x08) {
+	        		file.writeInt((int)tableData[i].data);
+	        	}
+	        	else if (tableData[i].serialCode==0x03 || tableData[i].serialCode==0x07 || tableData[i].serialCode==0x09 || tableData[i].serialCode==0x0A || tableData[i].serialCode==0x0B) {
+	        		file.writeLong((int)tableData[i].data);	
+	        	}
+	        	else{
+	        		file.writeBytes((String) tableData[i].data);
+	        	}
+	        }
+	        
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public static long getPagePointer(RandomAccessFile file){
+		int locInPage = 4;
+		long pagePointer = 0;
+		int nPage=0;
+		try {
+			file.seek(locInPage);
+			pagePointer = file.readInt();
+			while (pagePointer!=-1) {
+				nPage+=1;
+				long currentLoc = nPage*pageSize+locInPage;
+				file.seek(currentLoc);
+				pagePointer = file.readInt();
+			}
+		}
+		catch (IOException e) {	
+			e.printStackTrace();
+		}
+		return nPage*pageSize;
+	}
+
+	/**
+	 *  Stub method to check the datatype of the string and return appropriate serial code
+	 *  @param file is a RandomAccessFile of the user input
+	 */
+	public static int getnCellInFile(RandomAccessFile file, long pagePointer) {
+		int nCell = 0;
+		try {
+			file.seek(pagePointer+1);
+			nCell = file.readByte();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		return nCell;
+	}
+	
+	public static void setnCellInFile(RandomAccessFile file, long pagePointer, int currentCell) {
+		try {
+			file.seek(pagePointer+1);
+			int updatedCurrentCell = currentCell+1;
+			file.writeByte(updatedCurrentCell);
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
 		
-		
+	}
+	public static void setStartOfContent(RandomAccessFile file, long pagePointer, int writeLoc) {
+		try {
+			file.seek(pagePointer+2);
+			file.writeShort(writeLoc);
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	
-	/**
-	 *  Stub method to check the datatype of the string and return appropriate serial code
-	 *  @param dataType is a String of the user input
-	 */
-
-	public static long getSerialCode(String dataTypeName) {
-        long serialCode=0xFF;
-		if (dataTypeName.equalsIgnoreCase("int")) {
-            serialCode = 0x06;
-        } else if (dataTypeName.equalsIgnoreCase("tinyint")) {
-            serialCode = 0x04;
-        } else if (dataTypeName.equalsIgnoreCase("bigint")) {
-            serialCode = 0x07;
-        } else if (dataTypeName.equalsIgnoreCase("smallint")) {
-            serialCode = 0x05;
-        } else if (dataTypeName.equalsIgnoreCase("real")) {
-            serialCode = 0x08;
-        } else if (dataTypeName.equalsIgnoreCase("double")) {
-            serialCode = 0x09;
-        } else if (dataTypeName.equalsIgnoreCase("datetime")) {
-            serialCode = 0x0A;
-        } else if (dataTypeName.equalsIgnoreCase("date")) {
-            serialCode = 0x0B;
-        } else if (dataTypeName.equalsIgnoreCase("text")) {
-            serialCode = 0x0C;
-        }
-        return serialCode;
+	public static int getoffset(RandomAccessFile file, long pagePointer) {
+		int offset = -99;
+		try {
+			file.seek(pagePointer+ 2);
+			offset = file.readShort();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		
+		return offset;
 	}
+	
+	public static long getIndexOffset(int nCell, long pagePointer) {
+	
+		/*skipping cell to write indexOffset:
+		 * First 8 bytes for page offset and nCell and all
+		 * From 8th byte we are starting to write index
+		 * Now the location of our new index: 8+nCell*2 
+		 */
+		long indexOffset = pagePointer+ 8+2*nCell;
+		return indexOffset;
+	}
+	
+	public static void setIndexOffset(RandomAccessFile file, long indexWriteLoc, int writeLoc) {
+		try {
+			file.seek(indexWriteLoc);
+			file.writeShort(writeLoc);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+	
 	
 	/**
 	 *  Stub method to check whether table exist
