@@ -9,18 +9,18 @@ public class Records{
 	int serialCode;
 	public Records(String dataValue, String dataType) {
 		this.dataType = dataType;
-		if (dataType.equals("tinyint")||dataType.equals("smallint")||dataType.equals("int")||dataType.equals("bigint")) {
+		if (dataType.equalsIgnoreCase("tinyint")||dataType.equalsIgnoreCase("smallint")||dataType.equalsIgnoreCase("int")||dataType.equalsIgnoreCase("bigint")) {
 			this.data = Integer.parseInt(dataValue);
 		}
-		else if (dataType.equals("double")||dataType.equals("real")) {
+		else if (dataType.equalsIgnoreCase("double")||dataType.equalsIgnoreCase("real")) {
 			this.data=Float.parseFloat(dataValue);
 		}
-		else if (dataType.equals("date")) {
+		else if (dataType.equalsIgnoreCase("date")) {
 			this.data = getDate(dataValue);
 		}
-		else if (dataType.equals("datetime")) {
+		else if (dataType.equalsIgnoreCase("datetime")) {
 			this.data = getDateTime(dataValue);
-		} else if (dataType.equals("text")) {
+		} else if (dataType.equalsIgnoreCase("text")) {
 			this.data = dataValue;
 		}
 		else {

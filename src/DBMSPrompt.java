@@ -461,26 +461,23 @@ public class DBMSPrompt {
 		}
 		System.out.println(columnStr);
 		
+		/*Tokenizing string*/
+		ArrayList<String> ColumnTokens = new ArrayList<String>(Arrays.asList(columnStr.split(",")));
+		for (int i=0; i<ColumnTokens.size(); i++) {
+			System.out.println(ColumnTokens.get(i));			
+		}
+		if (ColumnTokens.size()<=1) {
+			System.out.println("--Error: A table must have atleast 1 column;--");
+			return;
+		}
+		
 		String tableFilePath = currentDatabasePath+"user_data\\"+tableFileName;
 		
 		if (tableExists(tableFilePath)) {
 			System.out.println("Table "+tableFileName+" already exist;");
 			return;
 		}
-		
-		/*  Code to create a .tbl file to contain table data */
-		try {
-			/*  Create RandomAccessFile tableFile in read-write mode.
-			 *  Note that this doesn't create the table file in the correct directory structure
-			 */
-			RandomAccessFile tableFile = new RandomAccessFile(tableFilePath, "rw");
-			createTableFile(tableFile, 0);
-			tableFile.close();
-		}
-		catch(Exception e) {
-			e.printStackTrace();
-		}
-		
+				
 		/*  Code to insert a row in the davisbase_tables table 
 		 *  i.e. database catalog meta-data 
 		 */
@@ -500,16 +497,8 @@ public class DBMSPrompt {
 	        tableData[1] = new Records(tableName, "text");
 	        
 	        writeRecordsInFile(catalogTableFile ,tableData, nCols);
-
-	        
-	        
-	        
-	        
-	        
-	        
-	        
-	        
-	        System.out.println("Catalog table is updated");
+	        catalogTableFile.close();
+	        System.out.println("-------------------Catalog table is updated---------------------");
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -518,30 +507,93 @@ public class DBMSPrompt {
 		 *  for each column in the new table 
 		 *  i.e. database catalog meta-data 
 		 */
-		ArrayList<String> ColumnTokens = new ArrayList<String>(Arrays.asList(columnStr.split(",")));
-		System.out.println(ColumnTokens.toString());
 		
 		
-		String catalogColumnFilePath = currentDatabasePath+"catalog\\metadata_tables.tbl";
-//		try {
-//	        RandomAccessFile catalogColumnFile =  new RandomAccessFile(catalogColumnFilePath, "rw");
-//	        for Columntoken
-//	        
-//	        
-//	        catalogColumnFile.seek(catalogColumnFile.length());
-//	        
-//	        catalogColumnFile.seek(catalogColumnFile.length());
-//	        catalogColumnFile.writeByte(0);
-//	        catalogColumnFile.writeByte(tableName.length());
-//	        catalogColumnFile.writeBytes(tableName);
-//	        catalogColumnFile.writeInt(0);
-//	        catalogColumnFile.close();	
-//	        System.out.println("Catalog table is updated");
-//		}
-//		catch (Exception e) {
-//			e.printStackTrace();
-//		}
-//		
+		String catalogColumnFilePath = currentDatabasePath+"catalog\\metadata_columns.tbl";
+		/*  Code to create a .tbl file to contain column data */
+		try {
+			/*  Create RandomAccessFile tableFile in read-write mode.
+			 *  Note that this doesn't create the table file in the correct directory structure
+			 */
+			RandomAccessFile catalogColumnFile = new RandomAccessFile(catalogColumnFilePath, "rw");
+			String columnData="";
+			
+			/*Writing row_id column by default*/
+			
+			int nCols = 6;
+	        /*Page pointer for the next page; no next page : -1*/
+			int row_id = getRow_id(catalogColumnFile);
+	        /*getting size of current data*/
+	        Records[] tableData= new Records[nCols];
+
+	        tableData[0] =	new Records(Integer.toString(row_id), "int");
+	        tableData[1] = new Records(tableName, "text");
+	        //Column name
+	        tableData[2] = new Records("row_id", "text");
+	        //data type
+	        tableData[3] = new Records("int", "text");
+	        //ordinal position
+	        tableData[4] = new Records("0", "tinyint");
+	        /*Not null: 
+	         * 1 -> True; 
+	         * 0 -> False*/
+	        tableData[5] = new Records("1", "tinyint");
+	       
+	        
+	        
+	        writeRecordsInFile(catalogColumnFile ,tableData, nCols);
+			
+			
+			for (int i=0; i<ColumnTokens.size(); i++) {
+				columnData = ColumnTokens.get(i);
+				/*Tokenizing string*/
+				ArrayList<String> colParameters = new ArrayList<String>(Arrays.asList(columnData.replaceAll("^[,\\s]+", "").split("[,\\s]+")));
+				System.out.println(colParameters.toString());
+				if (colParameters.size()<2) {
+					System.out.println("Error: column name or datatype is not defined");
+					return;
+				}
+
+				int ordinal_position=i+1;
+
+				int not_null=0;
+				String columnName = colParameters.get(0);
+				String datatype = colParameters.get(1);
+				System.out.println("colParameters.size: "+colParameters.size());
+				if (colParameters.size()==4 && colParameters.get(2).equals("not") && colParameters.get(3).equals("null")) {
+					not_null=1;
+				}
+				
+				nCols = 6;
+		        /*Page pointer for the next page; no next page : -1*/
+				row_id = getRow_id(catalogColumnFile);
+		        /*getting size of current data*/
+		        tableData= new Records[nCols];
+
+		        tableData[0] = new Records(Integer.toString(row_id), "int");
+		        tableData[1] = new Records(tableName, "text");
+		        tableData[2] = new Records(columnName, "text");
+		        tableData[3] = new Records(datatype, "text");
+		        tableData[4] = new Records(Integer.toString(ordinal_position), "tinyint");
+		        tableData[5] = new Records(Integer.toString(not_null), "tinyint");
+		        
+		        for (int j=0; j<nCols; j++) {
+		        	System.out.println(tableData[j].data+"; "+tableData[j].dataType+ "; "+tableData[j].nByte+"; "+tableData[j].serialCode);
+		        }
+		        
+		        
+		        writeRecordsInFile(catalogColumnFile ,tableData, nCols);
+		        System.out.println("");
+			}
+			
+			catalogColumnFile.close();
+	        System.out.println("Catalog column is updated");
+		
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
 			
 	}
 	
@@ -583,20 +635,20 @@ public class DBMSPrompt {
 	        long writeLoc = (lastRecordLoc-totalBytes);
 	        
 	        if ((indexWriteLoc+2) > writeLoc) {
-	        		/* updating page pointer from -1 to next page pointer*/
-					file.seek(pagePointer+4);
-					int newPagePointer =  (int) (pagePointer+pageSize);
-					file.writeInt(newPagePointer);
-					/* adding a new page*/
-					long fileSize = file.length();
-					createTableFile(file, fileSize);
-					/*updating page pointer*/
-					pagePointer = newPagePointer;
-					System.out.println(pagePointer);
-					nCellInPage = getnCellInFile(file, pagePointer);
-					lastRecordLoc = getoffset(file, pagePointer);
-					indexWriteLoc = getIndexOffset(nCellInPage, pagePointer);
-					writeLoc = (lastRecordLoc-totalBytes);
+        		/* updating page pointer from -1 to next page pointer*/
+				file.seek(pagePointer+4);
+				int newPagePointer =  (int) (pagePointer+pageSize);
+				file.writeInt(newPagePointer);
+				/* adding a new page*/
+				long fileSize = file.length();
+				createTableFile(file, fileSize);
+				/*updating page pointer*/
+				pagePointer = newPagePointer;
+				System.out.println(pagePointer);
+				nCellInPage = getnCellInFile(file, pagePointer);
+				lastRecordLoc = getoffset(file, pagePointer);
+				indexWriteLoc = getIndexOffset(nCellInPage, pagePointer);
+				writeLoc = (lastRecordLoc-totalBytes);
 	        }
 	        
 	        /*Updating nCellInPage*/
