@@ -649,9 +649,6 @@ public class DBMSPrompt {
 	        	totalBytes+=tableData[i].nByte;
 	        }
 	        
-	        /* If page is full, than add a new page*/
-	        long nPage=1;
-	        
 	        long writeLoc = (lastRecordLoc-totalBytes);
 	        
 	        if ((indexWriteLoc+2) > writeLoc) {
@@ -707,6 +704,15 @@ public class DBMSPrompt {
 		}
 	}
 	
+	public static String getDatabaseName() {
+		String dbName = "";
+		if (currentDatabasePath.equals("")) {
+			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			return dbName;
+		}
+		dbName = new File(currentDatabasePath).getName();
+		return dbName;
+	}
 	
 	/**
 	 *  Stub method for displaying table
@@ -715,12 +721,16 @@ public class DBMSPrompt {
 	public static void parseShowTable(String showTableStr) {
 //		System.out.println("STUB: This is the showTable method.");
 //		System.out.println("\tParsing the string:\"" + showTableStr + "\"");
+		if (currentDatabasePath.equals("")) {
+			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			return;
+		}
 		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(showTableStr.split(" ")));
 		
 //		int pos = currentDatabasePath.lastIndexOf("/") + 1;
 //		currentDatabasePath.substring(pos, path.length()-pos);
 		
-		String dbName = new File(currentDatabasePath).getName();
+		String dbName = getDatabaseName();
 		
 		if (commandTokens.size()==2) {
 			try {
@@ -749,10 +759,19 @@ public class DBMSPrompt {
 	}
 
 	public static void parseShowColumn(String showColumnStr) {
+		if (currentDatabasePath.equals("")) {
+			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			return;
+		}
 		int nCols = 6;
+		String dbName = getDatabaseName();
 		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(showColumnStr.split(" ")));
 		try {
 			if (commandTokens.size()==2) {
+				System.out.println("---------------------");
+				System.out.println("Columns in "+dbName);
+				System.out.println("---------------------");
+
 				RandomAccessFile columnFile = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.tbl", "r");
 				
 				ArrayList <Records[]> columnList = new ArrayList<Records[]>();
@@ -779,7 +798,7 @@ public class DBMSPrompt {
 						indexOffset+=2;
 					}
 				}while(fu.nextPageExist(columnFile, pagePointer));
-					
+				System.out.println("---------------------");
 			}
 		}
 		catch(Exception e) {
@@ -795,6 +814,10 @@ public class DBMSPrompt {
 	public static void dropTable(String dropTableString) {
 		System.out.println("STUB: This is the dropTable method.");
 		System.out.println("\tParsing the string:\"" + dropTableString + "\"");
+		if (currentDatabasePath.equals("")) {
+			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			return;
+		}
 	}
 	
 	/**
@@ -813,15 +836,79 @@ public class DBMSPrompt {
 	public static void parseUpdate(String updateString) {
 		System.out.println("STUB: This is the dropTable method");
 		System.out.println("Parsing the string:\"" + updateString + "\"");
+		if (currentDatabasePath.equals("")) {
+			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			return;
+		}
 	}
 	/**
 	 *  Stub method for inserting records
 	 *  @param insertQuery is a String of the user input
 	 */
-	public static void insertQuery(String queryString) {
+	public static void insertQuery(String insertQueryString) {
 //		System.out.println("STUB: This is the insert method");
 //		System.out.println("Parsing the string:\"" + queryString + "\"");
+		if (currentDatabasePath.equals("")) {
+			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			return;
+		}
+		ArrayList<String> insertQueryTokens = new ArrayList<String>(Arrays.asList(insertQueryString.split("values")));
+		ArrayList<String> beforeValuesTokens = new ArrayList<String>(Arrays.asList(insertQueryTokens.get(0).split(" ")));
 		
+		System.out.println(insertQueryTokens.toString());
+		System.out.println(beforeValuesTokens.toString());
+		if (beforeValuesTokens.get(0).equalsIgnoreCase("insert")==false || beforeValuesTokens.get(1).equalsIgnoreCase("into")==false) {
+			System.out.println("Error: Insert command is not correct. Please check syntex");
+			return;
+		}
+		
+		String tableName = beforeValuesTokens.get(2).substring(0, beforeValuesTokens.get(2).indexOf("("));
+		String tableFileName = tableName+".tbl";
+		String dbName = getDatabaseName();
+		
+		String tablePath = currentDatabasePath+"user_data\\"+tableFileName;
+		String metadataColumnPath = currentDatabasePath+"catalog\\metadata_columns.tbl";
+		
+		FileUtils fu = new FileUtils();
+		if (fu.tableExists(tablePath)==false) {
+			System.out.println("Error: Table "+dbName+"."+tableName+" does not exist");
+			return;
+		}
+		
+		String columnStr = "";
+		boolean useDefaultColsFlag = false;
+		try {
+			int startIndex = insertQueryTokens.get(0).indexOf("(");
+			int endIndex = insertQueryTokens.get(0).indexOf(")");
+			if (startIndex==-1 || endIndex==-1) {
+				useDefaultColsFlag=true;
+			}
+			else {
+				columnStr = insertQueryTokens.get(0).substring(startIndex+1, endIndex);
+				useDefaultColsFlag = false;
+				System.out.println("columnStr: "+columnStr);
+			}
+		}
+		catch(Exception e) {
+			System.out.println("Error: Syntex error");
+			return;
+		}
+		String valueStr = "";
+		try {
+			int startIndex = insertQueryTokens.get(1).indexOf("(");
+			int endIndex = insertQueryTokens.get(1).indexOf(")");
+			if (startIndex!=-1 || endIndex!=-1) {
+				valueStr = insertQueryTokens.get(1).substring(startIndex+1, endIndex);
+				System.out.println("valueStr: "+valueStr);
+			}
+		}
+		catch(Exception e) {
+			System.out.println("Error: Syntex error");
+			return;
+		}
+		
+		
+
 		
 //		readColumns(RandomAccessFile columnFile, String tableName);
 	}
@@ -830,8 +917,12 @@ public class DBMSPrompt {
 	 *  @param queryString is a String of the user input
 	 */
 	public static void deleteQuery(String queryString) {
-		System.out.println("STUB: This is the delete method");
-		System.out.println("Parsing the string:\"" + queryString + "\"");
+//		System.out.println("STUB: This is the delete method");
+//		System.out.println("Parsing the string:\"" + queryString + "\"");
+		if (currentDatabasePath.equals("")) {
+			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			return;
+		}
 	}
 	
 	public static ArrayList <Records[]> readColumns(RandomAccessFile columnFile, String tableName) {
@@ -920,7 +1011,6 @@ public class DBMSPrompt {
 		        	}
 		        	else
 		        	{
-		        		int currentPointer = (int)columnFile.getFilePointer();
 		        		int nReadLen = columnData[j].nByte;
 		        		char[] data = new char[nReadLen];
 //		        		System.out.println("currentPointer: "+currentPointer+" nReadLen: "+nReadLen+" currentPointer+nReadLen: "+(currentPointer+nReadLen));
