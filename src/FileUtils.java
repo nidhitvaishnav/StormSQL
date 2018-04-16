@@ -40,7 +40,7 @@ public class FileUtils {
 	
 	public int getRow_id(RandomAccessFile file) {
 		int pointerLocInPage = 4;
-		int rowLocInPage = 1;
+		int nRecordLocInPage = 1;
 		long pagePointer = 0;
 		int nPage=0;
 		int totalRecord = 0;
@@ -48,18 +48,23 @@ public class FileUtils {
 		try {
 			file.seek(pointerLocInPage);
 			pagePointer = file.readInt();
-			file.seek(rowLocInPage);
+			
+			file.seek(nRecordLocInPage);
 			pageRecord = file.readByte();
 			totalRecord+=pageRecord;
 			while (pagePointer!=-1) {
 				nPage+=1;
 				long currentPointerLoc = nPage*pageSize+pointerLocInPage;
+				System.out.println("CurrentPointerLoc: "+currentPointerLoc);
 				file.seek(currentPointerLoc);
 				pagePointer = file.readInt();
-				long currentRecordLoc = nPage*pageSize + rowLocInPage;
-				
-				file.seek(rowLocInPage);
+				System.out.println("PagePointer: "+pagePointer);
+				long currentRecordLoc = nPage*pageSize + nRecordLocInPage;
+				System.out.println("currentRecordLoc:"+currentRecordLoc);
+				file.seek(currentRecordLoc);
 				pageRecord = file.readByte();
+				System.out.println("pageRecord:"+pageRecord);
+					
 				totalRecord+=pageRecord;
 			}
 		}
@@ -88,7 +93,6 @@ public class FileUtils {
 	
 	public void setnCellInFile(RandomAccessFile file, long pagePointer, int currentCell) {
 		try {
-			System.out.println("Inside setnCellInFile(); pagepointer: "+pagePointer);
 			file.seek(pagePointer+1);
 			int updatedCurrentCell = currentCell+1;
 			file.writeByte(updatedCurrentCell);
@@ -164,6 +168,23 @@ public class FileUtils {
 		return existFlag;
 	}
 
+	public boolean nextPageExist(RandomAccessFile file, long pagePointer) {
+		boolean pageExistFlag = false;
+		try {
+			file.seek(pagePointer+4);
+			int nextPagePointer = file.readInt();
+			if (nextPagePointer!=-1) {
+				pageExistFlag = true;
+			}
+			
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		return pageExistFlag;
+		
+		
+	}
     
     
 }

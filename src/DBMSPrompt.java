@@ -175,6 +175,9 @@ public class DBMSPrompt {
 				else if(commandTokens.get(1).equalsIgnoreCase("tables")) {
 					parseShowTable(userCommand);
 				}
+				else if (commandTokens.get(1).equalsIgnoreCase("columns")) {
+					parseShowColumn(userCommand);
+				}
 				else {
 					System.out.println("I didn't understand the command: \"" + userCommand + "\"");					
 				}
@@ -504,7 +507,7 @@ public class DBMSPrompt {
 	        
 	        writeRecordsInFile(catalogTableFile ,tableData, nCols);
 	        catalogTableFile.close();
-	        System.out.println("-------------------Catalog table is updated---------------------");
+//	        System.out.println("-------------------Catalog table is updated---------------------");
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -554,7 +557,7 @@ public class DBMSPrompt {
 				columnData = ColumnTokens.get(i);
 				/*Tokenizing string*/
 				ArrayList<String> colParameters = new ArrayList<String>(Arrays.asList(columnData.replaceAll("^[,\\s]+", "").split("[,\\s]+")));
-				System.out.println(colParameters.toString());
+//				System.out.println(colParameters.toString());
 				if (colParameters.size()<2) {
 					System.out.println("Error: column name or datatype is not defined");
 					return;
@@ -565,7 +568,7 @@ public class DBMSPrompt {
 				int not_null=0;
 				String columnName = colParameters.get(0);
 				String datatype = colParameters.get(1);
-				System.out.println("colParameters.size: "+colParameters.size());
+//				System.out.println("colParameters.size: "+colParameters.size());
 				if (colParameters.size()==4 && colParameters.get(2).equals("not") && colParameters.get(3).equals("null")) {
 					not_null=1;
 				}
@@ -583,23 +586,34 @@ public class DBMSPrompt {
 		        tableData[4] = new Records(Integer.toString(ordinal_position), "tinyint");
 		        tableData[5] = new Records(Integer.toString(not_null), "tinyint");
 		        
-		        for (int j=0; j<nCols; j++) {
-		        	System.out.println(tableData[j].data+"; "+tableData[j].dataType+ "; "+tableData[j].nByte+"; "+tableData[j].serialCode);
-		        }
+//		        for (int j=0; j<nCols; j++) {
+//		        	System.out.println(tableData[j].data+"; "+tableData[j].dataType+ "; "+tableData[j].nByte+"; "+tableData[j].serialCode);
+//		        }
 		        
 		        
 		        writeRecordsInFile(catalogColumnFile ,tableData, nCols);
-		        System.out.println("");
+//		        System.out.println("");
 			}
 			
 			catalogColumnFile.close();
-	        System.out.println("Catalog column is updated");
-		
+//	        System.out.println("Catalog column is updated");
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		try {
+			/*  Create RandomAccessFile tableFile in read-write mode.
+			 *  Note that this doesn't create the table file in the correct directory structure
+			 */
+			RandomAccessFile tableFile = new RandomAccessFile(tableFilePath, "rw");
+			createTableFile(tableFile, 0);
 		}
 		catch(Exception e) {
 			e.printStackTrace();
 		}
 
+		System.out.println("Table "+tableName+" has been created successfully;");
+		
 			
 	}
 	
@@ -615,7 +629,7 @@ public class DBMSPrompt {
 	        /*get the total cell in the page*/
 			int nCellInPage = fu.getnCellInFile(file, pagePointer);
 	        
-	        System.out.println("nCellInPage: "+nCellInPage);
+//	        System.out.println("nCellInPage: "+nCellInPage);
 	       
 	        /*Get the offset of last element*/
 	        int lastRecordLoc = fu.getoffset(file, pagePointer);
@@ -623,12 +637,12 @@ public class DBMSPrompt {
 	        	System.out.println("Error in table creation");
 	        }
 	        
-	        System.out.println("last record loc: "+lastRecordLoc);
+//	        System.out.println("last record loc: "+lastRecordLoc);
 	        
 	        /*get offset of this index*/
 	        long indexWriteLoc = fu.getIndexOffset(nCellInPage, pagePointer);
 	        
-	        System.out.println("index write loc: "+indexWriteLoc);
+//	        System.out.println("index write loc: "+indexWriteLoc);
 			
 	        int totalBytes=1+nCols;
 	        for (int i = 0; i<nCols; i++) {
@@ -650,7 +664,7 @@ public class DBMSPrompt {
 				createTableFile(file, fileSize);
 				/*updating page pointer*/
 				pagePointer = newPagePointer;
-				System.out.println(pagePointer);
+//				System.out.println(pagePointer);
 				nCellInPage = fu.getnCellInFile(file, pagePointer);
 				lastRecordLoc = fu.getoffset(file, pagePointer);
 				indexWriteLoc = fu.getIndexOffset(nCellInPage, pagePointer);
@@ -729,11 +743,51 @@ public class DBMSPrompt {
 			}
 		}
 		else {
-			System.out.println("You have an error in your syntex right next to databases;");
+			System.out.println("You have an error in your syntex right next to tables;");
 		}
 		
 	}
 
+	public static void parseShowColumn(String showColumnStr) {
+		int nCols = 6;
+		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(showColumnStr.split(" ")));
+		try {
+			if (commandTokens.size()==2) {
+				RandomAccessFile columnFile = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.tbl", "r");
+				
+				ArrayList <Records[]> columnList = new ArrayList<Records[]>();
+				FileUtils fu = new FileUtils();
+				
+				long pagePointer = -512;
+				/*reading metadata table*/
+
+				do {
+					pagePointer+=pageSize;
+					int nCellInPage=fu.getnCellInFile(columnFile, pagePointer);
+					long indexOffset = pagePointer+8;
+					/*read all items in the given page*/
+//					System.out.println("   Inside While: IndexOffset: "+indexOffset);
+					for (int i=0; i<nCellInPage; i++) {
+
+						columnFile.seek(indexOffset);
+						int dataOffset = columnFile.readShort();
+//						System.out.println("   Inside for: dataOffset"+dataOffset);
+						Records[] recordRow = readRecord(columnFile, dataOffset);
+						
+						System.out.println(String.valueOf(recordRow[0].data)+" "+(String)recordRow[1].data+" "+(String)recordRow[2].data+" "+(String)recordRow[3].data+" "+String.valueOf(recordRow[4].data)+" "+String.valueOf(recordRow[5].data));
+
+						indexOffset+=2;
+					}
+				}while(fu.nextPageExist(columnFile, pagePointer));
+					
+			}
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+		
+	
 	/**
 	 *  Stub method for dropping tables
 	 *  @param dropTableString is a String of the user input
@@ -765,8 +819,11 @@ public class DBMSPrompt {
 	 *  @param insertQuery is a String of the user input
 	 */
 	public static void insertQuery(String queryString) {
-		System.out.println("STUB: This is the insert method");
-		System.out.println("Parsing the string:\"" + queryString + "\"");
+//		System.out.println("STUB: This is the insert method");
+//		System.out.println("Parsing the string:\"" + queryString + "\"");
+		
+		
+//		readColumns(RandomAccessFile columnFile, String tableName);
 	}
 	/**
 	 *  Stub method for deleting records
@@ -775,5 +832,112 @@ public class DBMSPrompt {
 	public static void deleteQuery(String queryString) {
 		System.out.println("STUB: This is the delete method");
 		System.out.println("Parsing the string:\"" + queryString + "\"");
+	}
+	
+	public static ArrayList <Records[]> readColumns(RandomAccessFile columnFile, String tableName) {
+		/* metadata table has 6 columns:
+		 * row_id, table_name, column_name, data_type, ordinal_position, is_nullable*/
+		int nCols = 6;
+		ArrayList <Records[]> columnList = new ArrayList<Records[]>();
+		FileUtils fu = new FileUtils();
+		
+		/*reading metadata table*/
+		try {
+			long pagePointer = -512;
+			/*reading metadata table*/
+
+			do {
+				pagePointer+=pageSize;
+				int nCellInPage=fu.getnCellInFile(columnFile, pagePointer);
+				long indexOffset = pagePointer+8;
+				/*read all items in the given page*/
+//				System.out.println("   Inside While: IndexOffset: "+indexOffset);
+				for (int i=0; i<nCellInPage; i++) {
+
+					columnFile.seek(indexOffset);
+					int dataOffset = columnFile.readShort();
+//					System.out.println("   Inside for: dataOffset"+dataOffset);
+					Records[] recordRow = readRecord(columnFile, dataOffset);
+					
+					System.out.println(String.valueOf(recordRow[0].data)+" "+(String)recordRow[1].data+" "+(String)recordRow[2].data+" "+(String)recordRow[3].data+" "+String.valueOf(recordRow[4].data)+" "+String.valueOf(recordRow[5].data));
+
+					indexOffset+=2;
+				}
+			}while(fu.nextPageExist(columnFile, pagePointer));
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		return columnList;
+		
+	}
+	
+	public static Records[] readRecord(RandomAccessFile columnFile, long dataOffset) {
+		Records[] columnData = null;
+		try {
+			
+			if (dataOffset!=-1) {
+
+				columnFile.seek(dataOffset);
+				/*read number of column*/
+				int tempNCols = columnFile.readByte();
+				columnData = new Records[tempNCols];
+				
+				for (int j=0; j<tempNCols; j++) {
+					int serialCode = columnFile.readByte();
+					columnData[j]=new Records(serialCode);
+//					System.out.println("serialCode: "+columnData[j].serialCode + " nByte: "+columnData[j].nByte);
+				}
+				for (int j=0; j<tempNCols; j++) {
+					if (columnData[j].serialCode==0x00 || columnData[j].serialCode==0x04) {
+						columnData[j].data = (int) columnFile.readByte();
+//						System.out.println("data: "+columnData[j].data);
+		        	}
+		        	else if (columnData[j].serialCode==0x01 || columnData[j].serialCode==0x05) {
+	        			columnData[j].data= (int) columnFile.readShort();
+//						System.out.println("data: "+columnData[j].data);
+
+		        	}
+		        	else if (columnData[j].serialCode==0x02 || columnData[j].serialCode==0x06 || columnData[j].serialCode==0x08) {
+		        		columnData[j].data = (int) columnFile.readInt();
+//  						System.out.println("data: "+columnData[j].data);
+
+		        	}
+		        	else if (columnData[j].serialCode==0x03 || columnData[j].serialCode==0x07 || columnData[j].serialCode==0x09 ) {
+		        		columnData[j].data = (float) columnFile.readLong();	
+//						System.out.println("data: "+columnData[j].data);
+
+		        	}
+		        	else if (columnData[j].serialCode==0x0A) {
+		        		Object date = columnFile.readLong();
+		        		columnData[j].data = columnData[j].getDate((String) date);
+//						System.out.println("data: "+columnData[j].data);
+		        	}
+		        	else if (columnData[j].serialCode==0x0B) {
+		        		Object dateTime = columnFile.readLong();
+		        		columnData[j].data = columnData[j].getDateTime((String)dateTime);
+//						System.out.println("data: "+columnData[j].data);
+		        	}
+		        	else
+		        	{
+		        		int currentPointer = (int)columnFile.getFilePointer();
+		        		int nReadLen = columnData[j].nByte;
+		        		char[] data = new char[nReadLen];
+//		        		System.out.println("currentPointer: "+currentPointer+" nReadLen: "+nReadLen+" currentPointer+nReadLen: "+(currentPointer+nReadLen));
+//		        		columnFile.read
+		        		for (int i=0; i<nReadLen; i++) {
+		        			data[i]=(char)columnFile.readByte();
+		        		}
+		        		String str = String.valueOf(data);
+//		        		System.out.println("read data:"+str);
+		        		columnData[j].data=str;		        			
+	        		}
+				}
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		return columnData;
 	}
 }

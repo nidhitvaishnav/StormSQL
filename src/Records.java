@@ -4,9 +4,16 @@ import java.util.Date;
 
 public class Records{
 	Object data;
-	String dataType;
+	String dataType=null;
 	int nByte;
 	int serialCode;
+	
+	public Records(int serialCode) {
+		this.serialCode = serialCode;
+		this.nByte = getByte(serialCode);
+		
+	}
+	
 	public Records(String dataValue, String dataType) {
 		this.dataType = dataType;
 		if (dataType.equalsIgnoreCase("tinyint")||dataType.equalsIgnoreCase("smallint")||dataType.equalsIgnoreCase("int")||dataType.equalsIgnoreCase("bigint")) {
@@ -24,15 +31,17 @@ public class Records{
 			this.data = dataValue;
 		}
 		else {
-			this.data=null;
+			this.data=0;
 		}
-		this.nByte = getByte(dataType);
-		this.serialCode = getSerialCode(dataType);
 		
+		this.serialCode = getSerialCode(dataType);
 		if (dataType.equals("text")){
 			nByte = dataValue.length();
 			serialCode = serialCode+nByte;
 		}
+		this.nByte = getByte(serialCode);
+		
+		
 	}
 	
 	public String getDate(String dateString) {
@@ -60,36 +69,24 @@ public class Records{
         return Long.toString(new Date().getTime());
 	}
 	
-	public int getByte(String dataTypeName) {
+	public int getByte(int serialCode) {
 		int nByte = 0;
-		if (dataTypeName.equalsIgnoreCase("tinyint") && data.equals("null")) {
+		if (serialCode==0x00 || serialCode==0x04) {
 			nByte=1;
-		} else if (dataTypeName.equalsIgnoreCase("smallint") && data.equals("null")) {
-			nByte=2;
-		} else if ((dataTypeName.equalsIgnoreCase("int") || dataTypeName.equalsIgnoreCase("real")) && data.equals("null")) {
-			nByte=4;
-		} else if ((dataTypeName.equalsIgnoreCase("double") || dataTypeName.equalsIgnoreCase("bigint") || dataTypeName.equalsIgnoreCase("datetime") || dataTypeName.equalsIgnoreCase("date")) && data.equals("null")) {
-			nByte = 8;
-		} else if (dataTypeName.equalsIgnoreCase("tinyint")) {
-			nByte=1;
-        }  else if (dataTypeName.equalsIgnoreCase("smallint")) {
-        	nByte=2;
-        } else if (dataTypeName.equalsIgnoreCase("int")) {
-        	nByte=4;            
-        } else if (dataTypeName.equalsIgnoreCase("bigint")) {
-        	nByte = 8;
-        } else if (dataTypeName.equalsIgnoreCase("real")) {
-        	nByte=4;
-        } else if (dataTypeName.equalsIgnoreCase("double")) {
-        	nByte = 8;
-        } else if (dataTypeName.equalsIgnoreCase("datetime")) {
-        	nByte = 8;
-        } else if (dataTypeName.equalsIgnoreCase("date")) {
-        	nByte = 8;
-        } else if (dataTypeName.equalsIgnoreCase("text")) {
-            nByte = -1;
-        }
-		
+    	}
+    	else if (serialCode==0x01 || serialCode==0x05) {
+    		 nByte=2;
+    	}
+    	else if (serialCode==0x02 || serialCode==0x06 || serialCode==0x08) {
+    		 nByte=4;
+    	}
+    	else if (serialCode==0x03 || serialCode==0x07 || serialCode==0x09 || serialCode==0x0A || serialCode==0x0B) {
+    		 nByte=8;
+    	}
+    	else
+    	{
+    		nByte = serialCode-0x0C;
+    	}
         return nByte;
 	}
 	
