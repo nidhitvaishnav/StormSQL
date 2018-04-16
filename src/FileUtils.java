@@ -55,15 +55,15 @@ public class FileUtils {
 			while (pagePointer!=-1) {
 				nPage+=1;
 				long currentPointerLoc = nPage*pageSize+pointerLocInPage;
-				System.out.println("CurrentPointerLoc: "+currentPointerLoc);
+//				System.out.println("CurrentPointerLoc: "+currentPointerLoc);
 				file.seek(currentPointerLoc);
 				pagePointer = file.readInt();
-				System.out.println("PagePointer: "+pagePointer);
+//				System.out.println("PagePointer: "+pagePointer);
 				long currentRecordLoc = nPage*pageSize + nRecordLocInPage;
-				System.out.println("currentRecordLoc:"+currentRecordLoc);
+//				System.out.println("currentRecordLoc:"+currentRecordLoc);
 				file.seek(currentRecordLoc);
 				pageRecord = file.readByte();
-				System.out.println("pageRecord:"+pageRecord);
+//				System.out.println("pageRecord:"+pageRecord);
 					
 				totalRecord+=pageRecord;
 			}

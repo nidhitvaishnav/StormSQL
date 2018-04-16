@@ -16,25 +16,27 @@ public class Records{
 	
 	public Records(String dataValue, String dataType) {
 		this.dataType = dataType;
-		if (dataType.equalsIgnoreCase("tinyint")||dataType.equalsIgnoreCase("smallint")||dataType.equalsIgnoreCase("int")||dataType.equalsIgnoreCase("bigint")) {
-			this.data = Integer.parseInt(dataValue);
-		}
-		else if (dataType.equalsIgnoreCase("double")||dataType.equalsIgnoreCase("real")) {
-			this.data=Float.parseFloat(dataValue);
-		}
-		else if (dataType.equalsIgnoreCase("date")) {
-			this.data = getDate(dataValue);
-		}
-		else if (dataType.equalsIgnoreCase("datetime")) {
-			this.data = getDateTime(dataValue);
-		} else if (dataType.equalsIgnoreCase("text")) {
-			this.data = dataValue;
-		}
-		else {
+		if (dataValue.equalsIgnoreCase("")){
 			this.data=0;
 		}
+		else {
+			if (dataType.equalsIgnoreCase("tinyint")||dataType.equalsIgnoreCase("smallint")||dataType.equalsIgnoreCase("int")||dataType.equalsIgnoreCase("bigint")) {
+				this.data = Integer.parseInt(dataValue);
+			}
+			else if (dataType.equalsIgnoreCase("double")||dataType.equalsIgnoreCase("real")) {
+				this.data=Float.parseFloat(dataValue);
+			}
+			else if (dataType.equalsIgnoreCase("date")) {
+				this.data = getDate(dataValue);
+			}
+			else if (dataType.equalsIgnoreCase("datetime")) {
+				this.data = getDateTime(dataValue);
+			} else if (dataType.equalsIgnoreCase("text")) {
+				this.data = dataValue;
+			}			
+		}
 		
-		this.serialCode = getSerialCode(dataType);
+		this.serialCode = getSerialCode(dataType, dataValue);
 		if (dataType.equals("text")){
 			nByte = dataValue.length();
 			serialCode = serialCode+nByte;
@@ -44,6 +46,7 @@ public class Records{
 		
 	}
 	
+	//TODO: check with getDate method
 	public String getDate(String dateString) {
 		String pattern = "MM:DD:YYYY";
         SimpleDateFormat format = new SimpleDateFormat(pattern);
@@ -57,6 +60,7 @@ public class Records{
 		
 	}
 	
+	//TODO: check with getDateTime method
 	public String getDateTime(String dateTimeString) {
 		String pattern = "MM:DD:YYYY hh:mm:ss";
         SimpleDateFormat format = new SimpleDateFormat(pattern);
@@ -90,15 +94,15 @@ public class Records{
         return nByte;
 	}
 	
-	public int getSerialCode(String dataTypeName) {
+	public int getSerialCode(String dataTypeName, String dataValue) {
 		int serialCode=0xFF;
-		if (dataTypeName.equalsIgnoreCase("tinyint") && data.equals("null")) {
+		if (dataTypeName.equalsIgnoreCase("tinyint") && dataValue.equals("")) {
 			serialCode = 0x00;
-		} else if (dataTypeName.equalsIgnoreCase("smallint") && data.equals("null")) {
+		} else if (dataTypeName.equalsIgnoreCase("smallint") && dataValue.equals("")) {
 			serialCode = 0x01;
-		} else if ((dataTypeName.equalsIgnoreCase("int") || dataTypeName.equalsIgnoreCase("real")) && data.equals("null")) {
+		} else if ((dataTypeName.equalsIgnoreCase("int") || dataTypeName.equalsIgnoreCase("real")) && dataValue.equals("")) {
 			serialCode = 0x02;
-		} else if ((dataTypeName.equalsIgnoreCase("double") || dataTypeName.equalsIgnoreCase("bigint") || dataTypeName.equalsIgnoreCase("datetime") || dataTypeName.equalsIgnoreCase("date")) && data.equals("null")) {
+		} else if ((dataTypeName.equalsIgnoreCase("double") || dataTypeName.equalsIgnoreCase("bigint") || dataTypeName.equalsIgnoreCase("datetime") || dataTypeName.equalsIgnoreCase("date")) && dataValue.equals("")) {
 			serialCode = 0x03;
 		} else if (dataTypeName.equalsIgnoreCase("tinyint")) {
             serialCode = 0x04;

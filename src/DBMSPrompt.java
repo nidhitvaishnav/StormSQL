@@ -1,5 +1,6 @@
 import java.io.RandomAccessFile;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Scanner;
@@ -694,7 +695,9 @@ public class DBMSPrompt {
 	        		file.writeLong((int)tableData[i].data);	
 	        	}
 	        	else{
-	        		file.writeBytes((String) tableData[i].data);
+	        		if (tableData[i].serialCode>0x0C) {
+		        		file.writeBytes((String) tableData[i].data);	        			
+	        		}
 	        	}
 	        }
 	        
@@ -857,12 +860,18 @@ public class DBMSPrompt {
 		
 		System.out.println(insertQueryTokens.toString());
 		System.out.println(beforeValuesTokens.toString());
-		if (beforeValuesTokens.get(0).equalsIgnoreCase("insert")==false || beforeValuesTokens.get(1).equalsIgnoreCase("into")==false) {
+		if (beforeValuesTokens.size()<3 ||beforeValuesTokens.get(0).equalsIgnoreCase("insert")==false || beforeValuesTokens.get(1).equalsIgnoreCase("into")==false) {
 			System.out.println("Error: Insert command is not correct. Please check syntex");
 			return;
 		}
 		
-		String tableName = beforeValuesTokens.get(2).substring(0, beforeValuesTokens.get(2).indexOf("("));
+		String tableName="";
+		if (beforeValuesTokens.get(2).indexOf("(")==-1) {
+			tableName = beforeValuesTokens.get(2);
+		}
+		else {
+			tableName = beforeValuesTokens.get(2).substring(0, beforeValuesTokens.get(2).indexOf("("));
+		}
 		String tableFileName = tableName+".tbl";
 		String dbName = getDatabaseName();
 		
@@ -871,11 +880,12 @@ public class DBMSPrompt {
 		
 		FileUtils fu = new FileUtils();
 		if (fu.tableExists(tablePath)==false) {
-			System.out.println("Error: Table "+dbName+"."+tableName+" does not exist");
+			System.out.println("Error: Table "+dbName+"."+tableName+" does not exist;");
 			return;
 		}
 		
 		String columnStr = "";
+		ArrayList<String>  columnTokens = null;
 		boolean useDefaultColsFlag = false;
 		try {
 			int startIndex = insertQueryTokens.get(0).indexOf("(");
@@ -886,7 +896,11 @@ public class DBMSPrompt {
 			else {
 				columnStr = insertQueryTokens.get(0).substring(startIndex+1, endIndex);
 				useDefaultColsFlag = false;
-				System.out.println("columnStr: "+columnStr);
+				columnTokens =  new ArrayList<String>(Arrays.asList(columnStr.split(",")));
+				for (int i=0; i<columnTokens.size();i++) {
+					columnTokens.set(i, columnTokens.get(i).trim());
+				}
+				System.out.println("columnTokens: "+columnTokens.toString());
 			}
 		}
 		catch(Exception e) {
@@ -899,16 +913,78 @@ public class DBMSPrompt {
 			int endIndex = insertQueryTokens.get(1).indexOf(")");
 			if (startIndex!=-1 || endIndex!=-1) {
 				valueStr = insertQueryTokens.get(1).substring(startIndex+1, endIndex);
-				System.out.println("valueStr: "+valueStr);
+				
 			}
 		}
 		catch(Exception e) {
 			System.out.println("Error: Syntex error");
 			return;
 		}
+		ArrayList<String>  valueTokens =  new ArrayList<String>(Arrays.asList(valueStr.split(",")));
+		for (int i=0; i<valueTokens.size();i++) {
+			valueTokens.set(i, valueTokens.get(i).trim());
+		}
+			
+		System.out.println("valueTokens: "+valueTokens.toString());
 		
-		
+		try {
+			RandomAccessFile columnFile = new RandomAccessFile(metadataColumnPath, "r");
+			RandomAccessFile tableFile = new RandomAccessFile(tablePath, "rw");
+			int row_id = fu.getRow_id(tableFile);
+			ArrayList <Records[]> columnList =  readColumns(columnFile,tableName);
+			int totalColumns = columnList.size();
+			
+			Records[] tableData = new Records[totalColumns];
+			
+			for (int i=0; i<totalColumns; i++) {
+				Records[] columnRecord = columnList.get(i);
+				System.out.println(String.valueOf(columnRecord[0].data)+" "+(String)columnRecord[1].data+" "+(String)columnRecord[2].data+" "+(String)columnRecord[3].data+" "+String.valueOf(columnRecord[4].data)+" "+String.valueOf(columnRecord[5].data));
+				
+				if (i==0) {
+					tableData[0] =	new Records(Integer.toString(row_id), "int");						
+				}
+				else {
+					if (useDefaultColsFlag) {
+						if ((totalColumns-1)!=valueTokens.size()) {
+							System.out.println("Error: Column count does not match value count");
+							return;												
+						}
+						else {
 
+							System.out.println("i: "+i+" value: "+valueTokens.get(i-1)+" dataType:"+(String)columnRecord[3].data);
+							tableData[i] = new Records(valueTokens.get(i-1).trim(), (String)columnRecord[3].data);	
+						}
+					}
+					else {
+						int valIndex = columnTokens.indexOf((String)columnRecord[2].data);
+						System.out.println("ValIndex: "+valIndex);
+						String value="";
+						if (valIndex==-1 && (int)columnRecord[5].data==1) {
+							System.out.println("Error: Field "+(String)columnRecord[2].data+" does not allow null values;");
+							return;
+						}
+						else if(valIndex==-1 && (int)columnRecord[5].data==0) {
+							value="";
+						}
+						else {
+							value = valueTokens.get(valIndex).trim();							
+						}
+						System.out.println("i: "+i+" value: "+value+" dataType:"+(String)columnRecord[3].data);
+
+						tableData[i]=new Records(value, (String)columnRecord[3].data);
+					}
+					
+				}
+				System.out.println("data: "+tableData[i].data+" serialCode: "+tableData[i].serialCode+" dataType: "+tableData[i].dataType+" nByte: "+tableData[i].nByte);
+			}
+		
+			writeRecordsInFile(tableFile ,tableData,totalColumns) ;			
+			
+			tableFile.close();
+			columnFile.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 		
 //		readColumns(RandomAccessFile columnFile, String tableName);
 	}
@@ -949,8 +1025,11 @@ public class DBMSPrompt {
 					int dataOffset = columnFile.readShort();
 //					System.out.println("   Inside for: dataOffset"+dataOffset);
 					Records[] recordRow = readRecord(columnFile, dataOffset);
-					
-					System.out.println(String.valueOf(recordRow[0].data)+" "+(String)recordRow[1].data+" "+(String)recordRow[2].data+" "+(String)recordRow[3].data+" "+String.valueOf(recordRow[4].data)+" "+String.valueOf(recordRow[5].data));
+					String currentTableName = (String)recordRow[1].data;
+					if (currentTableName.equalsIgnoreCase(tableName)) {
+						columnList.add(recordRow);
+					}
+//					System.out.println(String.valueOf(recordRow[0].data)+" "+(String)recordRow[1].data+" "+(String)recordRow[2].data+" "+(String)recordRow[3].data+" "+String.valueOf(recordRow[4].data)+" "+String.valueOf(recordRow[5].data));
 
 					indexOffset+=2;
 				}
