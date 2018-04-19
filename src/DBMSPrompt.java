@@ -952,7 +952,14 @@ public class DBMSPrompt {
 						else {
 
 							System.out.println("i: "+i+" value: "+valueTokens.get(i-1)+" dataType:"+(String)columnRecord[3].data);
+							try {
 							tableData[i] = new Records(valueTokens.get(i-1).trim(), (String)columnRecord[3].data);	
+							}
+							catch(NumberFormatException e) {
+								
+								System.out.println("Values mismatch error");
+								return;
+							}
 						}
 					}
 					else {
@@ -970,8 +977,13 @@ public class DBMSPrompt {
 							value = valueTokens.get(valIndex).trim();							
 						}
 						System.out.println("i: "+i+" value: "+value+" dataType:"+(String)columnRecord[3].data);
-
-						tableData[i]=new Records(value, (String)columnRecord[3].data);
+						try {
+							tableData[i]=new Records(value, (String)columnRecord[3].data);
+						}
+						catch(NumberFormatException e) {
+							System.out.println("Values mismatch error");
+							return;
+						}
 					}
 					
 				}
