@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import static java.lang.System.out;
 
+
 /**
  *  @author Nidhi Vaishnav
  *  @version 1.0
@@ -264,8 +265,8 @@ public class DBMSPrompt {
 						Boolean mdSuccessFlag = metadataFile.mkdir();
 						Boolean dataSuccessFlag = dataFile.mkdir();
 						setCurrentDatabase(dbName);
+						RandomAccessFile tablesCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_tables.tbl", "rw");
 						try {
-							RandomAccessFile tablesCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_tables.tbl", "rw");
 							createTableFile(tablesCatalog, 0);
 							tablesCatalog.close();
 						}
@@ -273,16 +274,22 @@ public class DBMSPrompt {
 							out.println("Error: Unable to create the metadata_tables file");
 							e.printStackTrace();
 						}
+						finally {
+							tablesCatalog.close();
+						}
 
 						/** Create davisbase_columns systems catalog */
+						RandomAccessFile columnsCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.tbl", "rw");
 						try {
-							RandomAccessFile columnsCatalog = new RandomAccessFile(currentDatabasePath+"catalog\\metadata_columns.tbl", "rw");
 							createTableFile(columnsCatalog, 0);
 							columnsCatalog.close();
 						}
 						catch (Exception e) {
 							out.println("Error: Unable to create the metadata_columns file");
 							e.printStackTrace();
+						}
+						finally {
+							columnsCatalog.close();
 						}
 						if (mdSuccessFlag && dataSuccessFlag) {
 							System.out.println("database "+dbName+" is successfully created;");
@@ -314,8 +321,8 @@ public class DBMSPrompt {
 		
 		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(createDBString.split(" ")));
 		if (commandTokens.size()==2) {
+			File[] directories = new File(currentPath).listFiles(File::isDirectory);
 			try {
-				File[] directories = new File(currentPath).listFiles(File::isDirectory);
 				System.out.println("---------------------");
 				System.out.println("Databases");
 				System.out.println("---------------------");
@@ -325,11 +332,11 @@ public class DBMSPrompt {
 					System.out.println(directories[x].getName());
 				}
 				System.out.println("---------------------");
-
 			}
 			catch(Exception e) {
 				e.printStackTrace();
 			}
+			
 		}
 		else {
 			System.out.println("Error: You have an error in your syntax right next to databases;");
@@ -497,7 +504,7 @@ public class DBMSPrompt {
 		String catalogTableFilePath = currentDatabasePath+"catalog\\metadata_tables.tbl";
 		
 		try {
-	        RandomAccessFile catalogTableFile =  new RandomAccessFile(catalogTableFilePath, "rw");
+			RandomAccessFile catalogTableFile =  new RandomAccessFile(catalogTableFilePath, "rw");
 	        int nCols = 2;
 	        
 	        /*Page pointer for the next page; no next page : -1*/
@@ -515,6 +522,7 @@ public class DBMSPrompt {
 		catch (Exception e) {
 			e.printStackTrace();
 		}
+		
 		/*  Code to insert rows in the davisbase_columns table  
 		 *  for each column in the new table 
 		 *  i.e. database catalog meta-data 
@@ -599,6 +607,7 @@ public class DBMSPrompt {
 			}
 			
 			catalogColumnFile.close();
+			
 //	        System.out.println("Catalog column is updated");
 		}
 		catch(Exception e) {
@@ -610,6 +619,7 @@ public class DBMSPrompt {
 			 */
 			RandomAccessFile tableFile = new RandomAccessFile(tableFilePath, "rw");
 			createTableFile(tableFile, 0);
+			tableFile.close();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -717,6 +727,7 @@ public class DBMSPrompt {
 		}
 		dbName = new File(currentDatabasePath).getName();
 		return dbName;
+		
 	}
 	
 	/**
@@ -805,7 +816,9 @@ public class DBMSPrompt {
 					}
 				}while(fu.nextPageExist(columnFile, pagePointer));
 				System.out.println("---------------------");
+				columnFile.close();
 			}
+			
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -845,21 +858,29 @@ public class DBMSPrompt {
 //			System.out.println("Error: Table "+dbName+"."+tableName+" does not exist;");
 //			return;
 //		}
+		File tableFile = new File(tablePath);	
 		try {
 			RandomAccessFile columnFile = new RandomAccessFile(metadataColumnPath, "rw");
 			RandomAccessFile metadataTableFile = new RandomAccessFile(metadataTablePath, "rw");
-			File tableFile = new File(tablePath);
-						
+			
+			System.out.println(tablePath);
 			dropRecords(columnFile, tableName, 1);
 			dropRecords(metadataTableFile, tableName, 1);
 			
-	        boolean isDeleted = tableFile.delete();
+//			if (tableFile.exists()) {
+//				System.out.println(tableName+" Exists;");
+//			}
+//			FileUtils.forceDelete(tableFile);
+			boolean isDeleted = tableFile.delete();
 			if (isDeleted) {
 				System.out.println(dbName+"."+tableName+" has been deleted successfully;");
 			}
 			else {
 				System.out.println("Error: table has not been deleted");
 			}
+			columnFile.close();
+			metadataTableFile.close();
+			
 		}
 		catch(Exception e) {
 			e.printStackTrace();
@@ -1072,6 +1093,8 @@ public class DBMSPrompt {
 				}
 			}while(fu.nextPageExist(tableFile, pagePointer));
 			System.out.println("---------------------");
+			columnFile.close();
+			tableFile.close();
 		}
 		catch(Exception e) {
 			e.printStackTrace();
