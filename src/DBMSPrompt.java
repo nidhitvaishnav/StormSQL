@@ -857,8 +857,8 @@ public class DBMSPrompt {
 		}
 		ArrayList<String> beforeFromTokens = new ArrayList<String>(Arrays.asList(selectQueryTokens.get(0).trim().split(" ")));
 		ArrayList<String> afterFromTokens = new ArrayList<String>(Arrays.asList(selectQueryTokens.get(1).trim().split(" ")));
-		System.out.println("beforeFromTokens"+beforeFromTokens.toString());
-		System.out.println("afterFromTokens"+afterFromTokens.toString());
+//		System.out.println("beforeFromTokens"+beforeFromTokens.toString());
+//		System.out.println("afterFromTokens"+afterFromTokens.toString());
 		
 
 		boolean selectAllFlag = false;
@@ -868,17 +868,16 @@ public class DBMSPrompt {
 		}
 		else {
 			for (int i=1; i<beforeFromTokens.size(); i++) {
-				System.out.println("beforeFromTokens.get("+i+")"+beforeFromTokens.get(i));
+//				System.out.println("beforeFromTokens.get("+i+")"+beforeFromTokens.get(i));
 				ArrayList<String> tempCols =new ArrayList<String>(Arrays.asList(beforeFromTokens.get(i).replaceAll("^[,\\s]+", "").split("[,\\s]+")));
-				System.out.println("tempCols: "+tempCols.toString());
+//				System.out.println("tempCols: "+tempCols.toString());
 				
 				if(tempCols.size()>0) {
 					selectColParameters.addAll(tempCols);
 				}
-//			 selectColParameters = new ArrayList<String>(Arrays.asList(columnData.replaceAll("^[,\\s]+", "").split("[,\\s]+")));
 			}
 		}
-		System.out.println("selectColParameters"+selectColParameters.toString());
+//		System.out.println("selectColParameters"+selectColParameters.toString());
 		
 		boolean conditionFlag = false;
 		ArrayList<String> conditionTokens = new ArrayList<String>();
@@ -902,7 +901,7 @@ public class DBMSPrompt {
 				return;				
 			}
 		}
-		System.out.println("conditionTokens: "+conditionTokens.toString());
+//		System.out.println("conditionTokens: "+conditionTokens.toString());
 		
 		
 		String tableName="";
@@ -928,10 +927,16 @@ public class DBMSPrompt {
 			ArrayList <Records[]> columnList =  readColumns(columnFile,tableName);
 			int totalColumns = columnList.size();
 			int conditionColIndex = -1;
+			int totalSelectCols;
 			
-			
-			int totalSelectCols= selectColParameters.size();
+			if (selectColParameters.size()>0) {
+				totalSelectCols= selectColParameters.size();
+			}
+			else {
+				totalSelectCols=totalColumns;
+			}
 			int[] selectColIndex = new int[totalSelectCols];
+			
 			Arrays.fill(selectColIndex, -1);
 			if (!selectAllFlag) {
 				for (int i=0; i<totalSelectCols; i++) {
@@ -939,7 +944,7 @@ public class DBMSPrompt {
 						String columnName = columnList.get(j)[2].data.toString();
 						if (selectColParameters.get(i).equalsIgnoreCase(columnName)) {
 							selectColIndex[i]=j;
-							System.out.print("colIndex: "+selectColIndex[i]);
+//							System.out.print("colIndex: "+selectColIndex[i]);
 						}
 					}
 					if (selectColIndex[i]==-1) {
@@ -948,24 +953,31 @@ public class DBMSPrompt {
 					}
 				}
 			}
-			
+			else {
+				for (int i=0; i<totalColumns; i++) {
+					selectColIndex[i]=i;
+//					System.out.print(columnList.get(i)[2].data.toString()+"\t");
+				}
+			}
+
+			for (int i=0; i<totalSelectCols; i++) {
+				int index = selectColIndex[i];
+				System.out.print(columnList.get(index)[2].data.toString()+"\t");
+			}
+
 			
 			for (int i=0; i<totalColumns; i++) {
 				String columnName = columnList.get(i)[2].data.toString();
 				if (conditionFlag && columnName.equalsIgnoreCase(conditionTokens.get(0))) {
 					conditionColIndex = i;
-				}
-				System.out.print(columnList.get(i)[2].data.toString()+"\t");	
+				}	
 			}
-			
-			
-			
+
 			System.out.println("\n---------------------------------------------------------");
 			
 			Records[] tableData = new Records[totalColumns];
 			long pagePointer = -512;
 			/*reading metadata table*/
-
 			do {
 				pagePointer+=pageSize;
 				int nCellInPage=fu.getnCellInFile(tableFile, pagePointer);
@@ -979,62 +991,46 @@ public class DBMSPrompt {
 //					System.out.println("   Inside for: dataOffset: "+dataOffset);
 					Records[] recordRow = readRecord(tableFile, dataOffset);
 //					System.out.println("recordRow.length: "+recordRow.length);
-					
+
 					if (conditionFlag) {
 						String conditionValue = conditionTokens.get(1);
-						String colValue;
-						if (recordRow[conditionColIndex].data!=null) {
-							colValue = recordRow[conditionColIndex].data.toString();							
+						String colValue="";
+						try {
+							if (recordRow[conditionColIndex].data!=null) {
+								colValue = recordRow[conditionColIndex].data.toString();							
+							}
+							else {
+								colValue="";
+							}							
 						}
-						else {
-							colValue="";
+						catch(ArrayIndexOutOfBoundsException e) {
+							System.out.println("Error: Syntex error");
+							return;
 						}
 						if (conditionValue.equalsIgnoreCase(colValue) && !(colValue.equalsIgnoreCase(""))) {
-							for (int j=0;j<recordRow.length;j++) {
-								printSelectRecords(recordRow[j]);
+							for (int j=0;j<totalSelectCols;j++) {
+								int index = selectColIndex[j];
+								printSelectRecords(recordRow[index]);
 							}
 							System.out.println("");											
 						}
-					}
+					}							
 					else {
-						for (int j=0;j<recordRow.length;j++) {
-							printSelectRecords(recordRow[j]);
+						for (int j=0; j<totalSelectCols; j++) {
+							int index = selectColIndex[j];
+							printSelectRecords(recordRow[index]);
 						}
-						System.out.println("");				
-
+						System.out.println("");											
 					}
-					
-					
-//					for (int j=0; j<recordRow.length; j++) {
-//
-//						if (conditionFlag) {
-//							String value = conditionTokens.get(1);
-//							if (conditionColIndex==j) {
-//								printSelectRecords(recordRow[j]);
-//							}							
-//						}
-//						else {
-//							printSelectRecords(recordRow[j]);
-//						}							
-//					}
-						
-					
-//					System.out.println(String.valueOf(recordRow[0].data)+" "+(String)recordRow[1].data+" "+(String)recordRow[2].data+" "+(String)recordRow[3].data+" "+String.valueOf(recordRow[4].data)+" "+String.valueOf(recordRow[5].data));
 
 					indexOffset+=2;
 				}
 			}while(fu.nextPageExist(tableFile, pagePointer));
 			System.out.println("---------------------");
-		
-
-			
-			
 		}
 		catch(Exception e) {
 			e.printStackTrace();
 		}
-		
-
 	}
 
 	public static void printSelectRecords(Records record) {
