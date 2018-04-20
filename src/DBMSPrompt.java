@@ -450,7 +450,7 @@ public class DBMSPrompt {
 		}
 		ArrayList<String> createTableTokens = new ArrayList<String>(Arrays.asList(createTableString.split(" ")));
 
-		System.out.println(createTableTokens.toString());
+//		System.out.println(createTableTokens.toString());
 		/* Define table file name */
 
 		String tableName = "";
@@ -471,14 +471,14 @@ public class DBMSPrompt {
 			System.out.println("Error: A table must have atleast 1 column;");
 			return;
 		}
-		System.out.println(columnStr);
+//		System.out.println(columnStr);
 		
 		/*Tokenizing string*/
 		ArrayList<String> ColumnTokens = new ArrayList<String>(Arrays.asList(columnStr.split(",")));
-		for (int i=0; i<ColumnTokens.size(); i++) {
-			System.out.println(ColumnTokens.get(i));			
-		}
-		if (ColumnTokens.size()<=1) {
+//		for (int i=0; i<ColumnTokens.size(); i++) {
+//			System.out.println(ColumnTokens.get(i));			
+//		}
+		if (ColumnTokens.size()<1) {
 			System.out.println("Error: A table must have atleast 1 column;");
 			return;
 		}
@@ -1058,14 +1058,14 @@ public class DBMSPrompt {
 //		System.out.println("STUB: This is the insert method");
 //		System.out.println("Parsing the string:\"" + queryString + "\"");
 		if (currentDatabasePath.equals("")) {
-			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
 			return;
 		}
 		ArrayList<String> insertQueryTokens = new ArrayList<String>(Arrays.asList(insertQueryString.split("values")));
 		ArrayList<String> beforeValuesTokens = new ArrayList<String>(Arrays.asList(insertQueryTokens.get(0).split(" ")));
 		
-		System.out.println(insertQueryTokens.toString());
-		System.out.println(beforeValuesTokens.toString());
+//		System.out.println(insertQueryTokens.toString());
+//		System.out.println(beforeValuesTokens.toString());
 		if (beforeValuesTokens.size()<3 ||beforeValuesTokens.get(0).equalsIgnoreCase("insert")==false || beforeValuesTokens.get(1).equalsIgnoreCase("into")==false) {
 			System.out.println("Error: Insert command is not correct. Please check syntex");
 			return;
@@ -1106,7 +1106,7 @@ public class DBMSPrompt {
 				for (int i=0; i<columnTokens.size();i++) {
 					columnTokens.set(i, columnTokens.get(i).trim());
 				}
-				System.out.println("columnTokens: "+columnTokens.toString());
+//				System.out.println("columnTokens: "+columnTokens.toString());
 			}
 		}
 		catch(Exception e) {
@@ -1130,7 +1130,7 @@ public class DBMSPrompt {
 			valueTokens.set(i, valueTokens.get(i).trim());
 		}
 			
-		System.out.println("valueTokens: "+valueTokens.toString());
+//		System.out.println("valueTokens: "+valueTokens.toString());
 		
 		try {
 			RandomAccessFile columnFile = new RandomAccessFile(metadataColumnPath, "r");
@@ -1143,7 +1143,7 @@ public class DBMSPrompt {
 			
 			for (int i=0; i<totalColumns; i++) {
 				Records[] columnRecord = columnList.get(i);
-				System.out.println(String.valueOf(columnRecord[0].data)+" "+(String)columnRecord[1].data+" "+(String)columnRecord[2].data+" "+(String)columnRecord[3].data+" "+String.valueOf(columnRecord[4].data)+" "+String.valueOf(columnRecord[5].data));
+//				System.out.println(String.valueOf(columnRecord[0].data)+" "+(String)columnRecord[1].data+" "+(String)columnRecord[2].data+" "+(String)columnRecord[3].data+" "+String.valueOf(columnRecord[4].data)+" "+String.valueOf(columnRecord[5].data));
 				
 				if (i==0) {
 					tableData[0] =	new Records(Integer.toString(row_id), "int");						
@@ -1156,20 +1156,20 @@ public class DBMSPrompt {
 						}
 						else {
 
-							System.out.println("i: "+i+" value: "+valueTokens.get(i-1)+" dataType:"+(String)columnRecord[3].data);
+//							System.out.println("i: "+i+" value: "+valueTokens.get(i-1)+" dataType:"+(String)columnRecord[3].data);
 							try {
 							tableData[i] = new Records(valueTokens.get(i-1).trim(), (String)columnRecord[3].data);	
 							}
 							catch(NumberFormatException e) {
 								
-								System.out.println("Values mismatch error");
+								System.out.println("Error: Values mismatch error");
 								return;
 							}
 						}
 					}
 					else {
 						int valIndex = columnTokens.indexOf((String)columnRecord[2].data);
-						System.out.println("ValIndex: "+valIndex);
+//						System.out.println("ValIndex: "+valIndex);
 						String value="";
 						if (valIndex==-1 && (int)columnRecord[5].data==1) {
 							System.out.println("Error: Field "+(String)columnRecord[2].data+" does not allow null values;");
@@ -1181,24 +1181,25 @@ public class DBMSPrompt {
 						else {
 							value = valueTokens.get(valIndex).trim();							
 						}
-						System.out.println("i: "+i+" value: "+value+" dataType:"+(String)columnRecord[3].data);
+//						System.out.println("i: "+i+" value: "+value+" dataType:"+(String)columnRecord[3].data);
 						try {
 							tableData[i]=new Records(value, (String)columnRecord[3].data);
 						}
 						catch(NumberFormatException e) {
-							System.out.println("Values mismatch error");
+							System.out.println("Error: Values mismatch error");
 							return;
 						}
 					}
 					
 				}
-				System.out.println("data: "+tableData[i].data+" serialCode: "+tableData[i].serialCode+" dataType: "+tableData[i].dataType+" nByte: "+tableData[i].nByte);
+//				System.out.println("data: "+tableData[i].data+" serialCode: "+tableData[i].serialCode+" dataType: "+tableData[i].dataType+" nByte: "+tableData[i].nByte);
 			}
 		
 			writeRecordsInFile(tableFile ,tableData,totalColumns) ;			
 			
 			tableFile.close();
 			columnFile.close();
+			System.out.println("Data has been inserted successfully;");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
