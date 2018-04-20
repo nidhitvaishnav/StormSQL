@@ -43,8 +43,9 @@ public class Records{
 		}
 		this.nByte = getByte(serialCode);
 		
-		
 	}
+	
+
 	
 	//TODO: check with getDate method
 	public String getDate(String dateString) {

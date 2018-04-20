@@ -17,6 +17,7 @@ import static java.lang.System.out;
  *  </b>
  *
  */
+
 public class DBMSPrompt {
 
 	/* This can be changed to whatever you like */
@@ -43,6 +44,7 @@ public class DBMSPrompt {
 	
 	/** ***********************************************************************
 	 *  Main method
+	 *  ***********************************************************************
 	 */
     public static void main(String[] args) {
 
@@ -68,10 +70,10 @@ public class DBMSPrompt {
 	 *  Static method definitions
 	 */
 
-	/**
-	 *  Display the splash screen
-	 */
-	public static void splashScreen() {
+	/** ***********************************************************************
+	 *  splashScreen method
+	 *  ***********************************************************************
+	 */	public static void splashScreen() {
 		System.out.println(line("-",80));
         System.out.println("Welcome to stormBaseLite"); // Display the string.
 		System.out.println("stormBaseLite Version " + getVersion());
@@ -200,7 +202,7 @@ public class DBMSPrompt {
 				useDatabase(userCommand);
 				break;
 			case "insert":
-				System.out.println("CASE: INSERT");
+//				System.out.println("CASE: INSERT");
 				insertQuery(userCommand);
 				break;
 			case "delete":
@@ -214,7 +216,7 @@ public class DBMSPrompt {
 
 			case "select":
 				System.out.println("CASE: SELECT");
-				parseQuery(userCommand);
+				parseSelectQuery(userCommand);
 				break;
 			
 			case "help":
@@ -253,7 +255,7 @@ public class DBMSPrompt {
 				if (!dbExist) {
 					Boolean dbSuccessFlag = dbFile.mkdir();
 					if (!dbSuccessFlag) {
-						System.out.println("database "+dbName+" has not been created;");
+						System.out.println("Error: database "+dbName+" has not been created;");
 					}
 					else {
 						File metadataFile = new File(currentPath+ dbName+"\\catalog");
@@ -268,7 +270,7 @@ public class DBMSPrompt {
 							tablesCatalog.close();
 						}
 						catch (Exception e) {
-							out.println("Unable to create the metadata_tables file");
+							out.println("Error: Unable to create the metadata_tables file");
 							e.printStackTrace();
 						}
 
@@ -279,19 +281,19 @@ public class DBMSPrompt {
 							columnsCatalog.close();
 						}
 						catch (Exception e) {
-							out.println("Unable to create the metadata_columns file");
+							out.println("Error: Unable to create the metadata_columns file");
 							e.printStackTrace();
 						}
 						if (mdSuccessFlag && dataSuccessFlag) {
 							System.out.println("database "+dbName+" is successfully created;");
 						}
 						else {
-							System.out.println("matadata or data is not created;");
+							System.out.println("Error: matadata or data is not created;");
 						}
 					}
 				}
 				else {
-					System.out.println("Can't create database "+dbName+"; database already exists;");
+					System.out.println("Error: Can't create database "+dbName+"; database already exists;");
 				}
 			}
 			catch(Exception e){
@@ -330,7 +332,7 @@ public class DBMSPrompt {
 			}
 		}
 		else {
-			System.out.println("You have an error in your syntex right next to databases;");
+			System.out.println("Error: You have an error in your syntex right next to databases;");
 		}
 	}
 		
@@ -357,7 +359,7 @@ public class DBMSPrompt {
 							System.out.println("database "+dbName+" has been deleted successfully;");
 						}
 						else {
-							System.out.println("Cannot delete database "+dbName+";");
+							System.out.println("Error: Cannot delete database "+dbName+";");
 						}
 					}
 					catch (Exception e) {
@@ -365,11 +367,11 @@ public class DBMSPrompt {
 					}
 			}
 			else {
-				System.out.println("can't drop database '"+dbName+"', database does not exist;");
+				System.out.println("Error: can't drop database '"+dbName+"', database does not exist;");
 			}
 		}
 		else {
-			System.out.println("You have an error in your syntex right next to databases;");
+			System.out.println("Error: You have an error in your syntex right next to databases;");
 		}
 	}
 	/**
@@ -388,7 +390,7 @@ public class DBMSPrompt {
 				setCurrentDatabase(dbName);
 			}
 			else {
-				System.out.println("Unknown database "+dbName+";");
+				System.out.println("Error: Unknown database "+dbName+";");
 			}
 		}
 	}
@@ -443,7 +445,7 @@ public class DBMSPrompt {
 //		System.out.println("Parsing the string:\"" + createTableString + "\"");
 		
 		if (currentDatabasePath.equals("")) {
-			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
 			return;
 		}
 		ArrayList<String> createTableTokens = new ArrayList<String>(Arrays.asList(createTableString.split(" ")));
@@ -477,14 +479,14 @@ public class DBMSPrompt {
 			System.out.println(ColumnTokens.get(i));			
 		}
 		if (ColumnTokens.size()<=1) {
-			System.out.println("--Error: A table must have atleast 1 column;--");
+			System.out.println("Error: A table must have atleast 1 column;");
 			return;
 		}
 		
 		String tableFilePath = currentDatabasePath+"user_data\\"+tableFileName;
 		FileUtils fu = new FileUtils();
 		if (fu.tableExists(tableFilePath)) {
-			System.out.println("Table "+tableFileName+" already exist;");
+			System.out.println("Error: Table "+tableFileName+" already exist;");
 			return;
 		}
 				
@@ -635,7 +637,7 @@ public class DBMSPrompt {
 	        /*Get the offset of last element*/
 	        int lastRecordLoc = fu.getoffset(file, pagePointer);
 	        if (lastRecordLoc==-99 ) {
-	        	System.out.println("Error in table creation");
+	        	System.out.println("Error: Error in table creation");
 	        }
 	        
 //	        System.out.println("last record loc: "+lastRecordLoc);
@@ -710,7 +712,7 @@ public class DBMSPrompt {
 	public static String getDatabaseName() {
 		String dbName = "";
 		if (currentDatabasePath.equals("")) {
-			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
 			return dbName;
 		}
 		dbName = new File(currentDatabasePath).getName();
@@ -725,7 +727,7 @@ public class DBMSPrompt {
 //		System.out.println("STUB: This is the showTable method.");
 //		System.out.println("\tParsing the string:\"" + showTableStr + "\"");
 		if (currentDatabasePath.equals("")) {
-			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
 			return;
 		}
 		ArrayList<String> commandTokens = new ArrayList<String>(Arrays.asList(showTableStr.split(" ")));
@@ -756,14 +758,14 @@ public class DBMSPrompt {
 			}
 		}
 		else {
-			System.out.println("You have an error in your syntex right next to tables;");
+			System.out.println("Error: You have an error in your syntex right next to tables;");
 		}
 		
 	}
 
 	public static void parseShowColumn(String showColumnStr) {
 		if (currentDatabasePath.equals("")) {
-			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
 			return;
 		}
 		int nCols = 6;
@@ -818,19 +820,11 @@ public class DBMSPrompt {
 		System.out.println("STUB: This is the dropTable method.");
 		System.out.println("\tParsing the string:\"" + dropTableString + "\"");
 		if (currentDatabasePath.equals("")) {
-			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
 			return;
 		}
 	}
-	
-	/**
-	 *  Stub method for executing queries
-	 *  @param queryString is a String of the user input
-	 */
-	public static void parseQuery(String queryString) {
-		System.out.println("STUB: This is the parseQuery method");
-		System.out.println("\tParsing the string:\"" + queryString + "\"");
-	}
+
 
 	/**
 	 *  Stub method for updating records
@@ -840,10 +834,222 @@ public class DBMSPrompt {
 		System.out.println("STUB: This is the dropTable method");
 		System.out.println("Parsing the string:\"" + updateString + "\"");
 		if (currentDatabasePath.equals("")) {
-			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
 			return;
 		}
 	}
+	
+	/**
+	 *  Stub method for executing queries
+	 *  @param queryString is a String of the user input
+	 */
+	public static void parseSelectQuery(String queryString) {
+//		System.out.println("STUB: This is the parseQuery method");
+//		System.out.println("\tParsing the string:\"" + queryString + "\"");
+		if (currentDatabasePath.equals("")) {
+			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
+			return;
+		}
+		ArrayList<String> selectQueryTokens = new ArrayList<String>(Arrays.asList(queryString.trim().split("from")));
+		if (selectQueryTokens.size()!=2) {
+			System.out.println("Error: Syntex error");
+			return;
+		}
+		ArrayList<String> beforeFromTokens = new ArrayList<String>(Arrays.asList(selectQueryTokens.get(0).trim().split(" ")));
+		ArrayList<String> afterFromTokens = new ArrayList<String>(Arrays.asList(selectQueryTokens.get(1).trim().split(" ")));
+		System.out.println("beforeFromTokens"+beforeFromTokens.toString());
+		System.out.println("afterFromTokens"+afterFromTokens.toString());
+		
+
+		boolean selectAllFlag = false;
+		ArrayList<String> selectColParameters = new ArrayList<String>();
+		if (beforeFromTokens.get(1).equalsIgnoreCase("*")) {
+			selectAllFlag=true;
+		}
+		else {
+			for (int i=1; i<beforeFromTokens.size(); i++) {
+				System.out.println("beforeFromTokens.get("+i+")"+beforeFromTokens.get(i));
+				ArrayList<String> tempCols =new ArrayList<String>(Arrays.asList(beforeFromTokens.get(i).replaceAll("^[,\\s]+", "").split("[,\\s]+")));
+				System.out.println("tempCols: "+tempCols.toString());
+				
+				if(tempCols.size()>0) {
+					selectColParameters.addAll(tempCols);
+				}
+//			 selectColParameters = new ArrayList<String>(Arrays.asList(columnData.replaceAll("^[,\\s]+", "").split("[,\\s]+")));
+			}
+		}
+		System.out.println("selectColParameters"+selectColParameters.toString());
+		
+		boolean conditionFlag = false;
+		ArrayList<String> conditionTokens = new ArrayList<String>();
+		if (queryString.contains("where")) {
+			conditionFlag= true;
+			ArrayList<String> whereTokens = new ArrayList<String>(Arrays.asList(queryString.trim().split("where")));
+			if (whereTokens.size()!=2) {
+				System.out.println("Error: Syntex error in WHERE clause");
+				return;
+			}
+			if (whereTokens.get(1).contains("=")) {
+				ArrayList<String> tempConditionTokens = new ArrayList<String>(Arrays.asList(whereTokens.get(1).trim().split("=")));				
+				for (int i=0; i<tempConditionTokens.size(); i++) {
+					if (!tempConditionTokens.get(i).equalsIgnoreCase("")){
+						conditionTokens.add(tempConditionTokens.get(i).trim());
+					}
+				}
+			}
+			else {
+				System.out.println("Error: Syntex error in WHERE clause");
+				return;				
+			}
+		}
+		System.out.println("conditionTokens: "+conditionTokens.toString());
+		
+		
+		String tableName="";
+		if (afterFromTokens.get(0) != null) {
+			tableName = afterFromTokens.get(0);
+		}
+		else {
+			System.out.println("Error: You have Not given file name");
+		}
+		String tableFileName = tableName+".tbl";
+		String dbName = getDatabaseName();
+		String tablePath = currentDatabasePath+"user_data\\"+tableFileName;
+		String metadataColumnPath = currentDatabasePath+"catalog\\metadata_columns.tbl";
+		
+		FileUtils fu = new FileUtils();
+		if (fu.tableExists(tablePath)==false) {
+			System.out.println("Error: Table "+dbName+"."+tableName+" does not exist;");
+			return;
+		}
+		try {
+			RandomAccessFile columnFile = new RandomAccessFile(metadataColumnPath, "r");
+			RandomAccessFile tableFile = new RandomAccessFile(tablePath, "rw");
+			ArrayList <Records[]> columnList =  readColumns(columnFile,tableName);
+			int totalColumns = columnList.size();
+			int conditionColIndex = -1;
+			
+			
+			int totalSelectCols= selectColParameters.size();
+			int[] selectColIndex = new int[totalSelectCols];
+			Arrays.fill(selectColIndex, -1);
+			if (!selectAllFlag) {
+				for (int i=0; i<totalSelectCols; i++) {
+					for (int j=0; j<totalColumns; j++) {
+						String columnName = columnList.get(j)[2].data.toString();
+						if (selectColParameters.get(i).equalsIgnoreCase(columnName)) {
+							selectColIndex[i]=j;
+							System.out.print("colIndex: "+selectColIndex[i]);
+						}
+					}
+					if (selectColIndex[i]==-1) {
+						System.out.println("Error: "+selectColParameters.get(i)+" column does not exist in "+dbName+"."+tableName+";");
+						return;
+					}
+				}
+			}
+			
+			
+			for (int i=0; i<totalColumns; i++) {
+				String columnName = columnList.get(i)[2].data.toString();
+				if (conditionFlag && columnName.equalsIgnoreCase(conditionTokens.get(0))) {
+					conditionColIndex = i;
+				}
+				System.out.print(columnList.get(i)[2].data.toString()+"\t");	
+			}
+			
+			
+			
+			System.out.println("\n---------------------------------------------------------");
+			
+			Records[] tableData = new Records[totalColumns];
+			long pagePointer = -512;
+			/*reading metadata table*/
+
+			do {
+				pagePointer+=pageSize;
+				int nCellInPage=fu.getnCellInFile(tableFile, pagePointer);
+				long indexOffset = pagePointer+8;
+				/*read all items in the given page*/
+//				System.out.println("   Inside While: IndexOffset: "+indexOffset);
+				for (int i=0; i<nCellInPage; i++) {
+
+					tableFile.seek(indexOffset);
+					int dataOffset = tableFile.readShort();
+//					System.out.println("   Inside for: dataOffset: "+dataOffset);
+					Records[] recordRow = readRecord(tableFile, dataOffset);
+//					System.out.println("recordRow.length: "+recordRow.length);
+					
+					if (conditionFlag) {
+						String conditionValue = conditionTokens.get(1);
+						String colValue;
+						if (recordRow[conditionColIndex].data!=null) {
+							colValue = recordRow[conditionColIndex].data.toString();							
+						}
+						else {
+							colValue="";
+						}
+						if (conditionValue.equalsIgnoreCase(colValue) && !(colValue.equalsIgnoreCase(""))) {
+							for (int j=0;j<recordRow.length;j++) {
+								printSelectRecords(recordRow[j]);
+							}
+							System.out.println("");											
+						}
+					}
+					else {
+						for (int j=0;j<recordRow.length;j++) {
+							printSelectRecords(recordRow[j]);
+						}
+						System.out.println("");				
+
+					}
+					
+					
+//					for (int j=0; j<recordRow.length; j++) {
+//
+//						if (conditionFlag) {
+//							String value = conditionTokens.get(1);
+//							if (conditionColIndex==j) {
+//								printSelectRecords(recordRow[j]);
+//							}							
+//						}
+//						else {
+//							printSelectRecords(recordRow[j]);
+//						}							
+//					}
+						
+					
+//					System.out.println(String.valueOf(recordRow[0].data)+" "+(String)recordRow[1].data+" "+(String)recordRow[2].data+" "+(String)recordRow[3].data+" "+String.valueOf(recordRow[4].data)+" "+String.valueOf(recordRow[5].data));
+
+					indexOffset+=2;
+				}
+			}while(fu.nextPageExist(tableFile, pagePointer));
+			System.out.println("---------------------");
+		
+
+			
+			
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		
+
+	}
+
+	public static void printSelectRecords(Records record) {
+		if (record.serialCode<0x0A) {
+			System.out.print(String.valueOf(record.data+"\t"));
+		}
+		else {
+			System.out.print(record.data+"\t");
+		}
+	}
+	
+	
+	
+	
+	
 	/**
 	 *  Stub method for inserting records
 	 *  @param insertQuery is a String of the user input
@@ -912,8 +1118,7 @@ public class DBMSPrompt {
 			int startIndex = insertQueryTokens.get(1).indexOf("(");
 			int endIndex = insertQueryTokens.get(1).indexOf(")");
 			if (startIndex!=-1 || endIndex!=-1) {
-				valueStr = insertQueryTokens.get(1).substring(startIndex+1, endIndex);
-				
+				valueStr = insertQueryTokens.get(1).substring(startIndex+1, endIndex);		
 			}
 		}
 		catch(Exception e) {
@@ -1064,6 +1269,7 @@ public class DBMSPrompt {
 				/*read number of column*/
 				int tempNCols = columnFile.readByte();
 				columnData = new Records[tempNCols];
+//				System.out.println("TempNCols: "+tempNCols);
 				
 				for (int j=0; j<tempNCols; j++) {
 					int serialCode = columnFile.readByte();
@@ -1071,32 +1277,38 @@ public class DBMSPrompt {
 //					System.out.println("serialCode: "+columnData[j].serialCode + " nByte: "+columnData[j].nByte);
 				}
 				for (int j=0; j<tempNCols; j++) {
-					if (columnData[j].serialCode==0x00 || columnData[j].serialCode==0x04) {
+					if (columnData[j].serialCode<0x04) {
+						columnData[j].data=null;
+					}
+					else if (columnData[j].serialCode==0x04) {
 						columnData[j].data = (int) columnFile.readByte();
 //						System.out.println("data: "+columnData[j].data);
 		        	}
-		        	else if (columnData[j].serialCode==0x01 || columnData[j].serialCode==0x05) {
-	        			columnData[j].data= (int) columnFile.readShort();
+		        	else if (columnData[j].serialCode==0x05) {
+	        			columnData[j].data= (int) columnFile.readShort();		        			
 //						System.out.println("data: "+columnData[j].data);
 
 		        	}
-		        	else if (columnData[j].serialCode==0x02 || columnData[j].serialCode==0x06 || columnData[j].serialCode==0x08) {
+		        	else if (columnData[j].serialCode==0x06 || columnData[j].serialCode==0x08) {
 		        		columnData[j].data = (int) columnFile.readInt();
 //  						System.out.println("data: "+columnData[j].data);
 
 		        	}
-		        	else if (columnData[j].serialCode==0x03 || columnData[j].serialCode==0x07 || columnData[j].serialCode==0x09 ) {
+		        	else if (columnData[j].serialCode==0x07 || columnData[j].serialCode==0x09 ) {
 		        		columnData[j].data = (float) columnFile.readLong();	
 //						System.out.println("data: "+columnData[j].data);
 
 		        	}
 		        	else if (columnData[j].serialCode==0x0A) {
 		        		Object date = columnFile.readLong();
+
 		        		columnData[j].data = columnData[j].getDate((String) date);
 //						System.out.println("data: "+columnData[j].data);
 		        	}
 		        	else if (columnData[j].serialCode==0x0B) {
+		        		
 		        		Object dateTime = columnFile.readLong();
+
 		        		columnData[j].data = columnData[j].getDateTime((String)dateTime);
 //						System.out.println("data: "+columnData[j].data);
 		        	}
@@ -1104,14 +1316,18 @@ public class DBMSPrompt {
 		        	{
 		        		int nReadLen = columnData[j].nByte;
 		        		char[] data = new char[nReadLen];
-//		        		System.out.println("currentPointer: "+currentPointer+" nReadLen: "+nReadLen+" currentPointer+nReadLen: "+(currentPointer+nReadLen));
-//		        		columnFile.read
-		        		for (int i=0; i<nReadLen; i++) {
-		        			data[i]=(char)columnFile.readByte();
+		        		if (nReadLen==0) {
+		        			columnData[j].data=null;
 		        		}
-		        		String str = String.valueOf(data);
-//		        		System.out.println("read data:"+str);
-		        		columnData[j].data=str;		        			
+		        		else {
+			        		for (int i=0; i<nReadLen; i++) {
+			        			data[i]=(char)columnFile.readByte();
+			        		}
+			        		String str = String.valueOf(data);
+//			        		System.out.println("read data:"+str);
+			        		columnData[j].data=str;		        			
+		        			
+		        		}
 	        		}
 				}
 			}
