@@ -332,7 +332,7 @@ public class DBMSPrompt {
 			}
 		}
 		else {
-			System.out.println("Error: You have an error in your syntex right next to databases;");
+			System.out.println("Error: You have an error in your syntax right next to databases;");
 		}
 	}
 		
@@ -371,7 +371,7 @@ public class DBMSPrompt {
 			}
 		}
 		else {
-			System.out.println("Error: You have an error in your syntex right next to databases;");
+			System.out.println("Error: You have an error in your syntax right next to databases;");
 		}
 	}
 	/**
@@ -758,7 +758,7 @@ public class DBMSPrompt {
 			}
 		}
 		else {
-			System.out.println("Error: You have an error in your syntex right next to tables;");
+			System.out.println("Error: You have an error in your syntax right next to tables;");
 		}
 		
 	}
@@ -796,9 +796,10 @@ public class DBMSPrompt {
 						columnFile.seek(indexOffset);
 						int dataOffset = columnFile.readShort();
 //						System.out.println("   Inside for: dataOffset"+dataOffset);
-						Records[] recordRow = readRecord(columnFile, dataOffset);
-						
-						System.out.println(String.valueOf(recordRow[0].data)+" "+(String)recordRow[1].data+" "+(String)recordRow[2].data+" "+(String)recordRow[3].data+" "+String.valueOf(recordRow[4].data)+" "+String.valueOf(recordRow[5].data));
+						if (dataOffset!=-1) {		
+							Records[] recordRow = readRecord(columnFile, dataOffset);
+							System.out.println(String.valueOf(recordRow[0].data)+" "+(String)recordRow[1].data+" "+(String)recordRow[2].data+" "+(String)recordRow[3].data+" "+String.valueOf(recordRow[4].data)+" "+String.valueOf(recordRow[5].data));
+						}
 
 						indexOffset+=2;
 					}
@@ -817,12 +818,53 @@ public class DBMSPrompt {
 	 *  @param dropTableString is a String of the user input
 	 */
 	public static void dropTable(String dropTableString) {
-		System.out.println("STUB: This is the dropTable method.");
-		System.out.println("\tParsing the string:\"" + dropTableString + "\"");
+//		System.out.println("STUB: This is the dropTable method.");
+//		System.out.println("\tParsing the string:\"" + dropTableString + "\"");
 		if (currentDatabasePath.equals("")) {
 			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
 			return;
 		}
+		ArrayList<String> dropQueryTokens = new ArrayList<String>(Arrays.asList(dropTableString.split(" ")));
+		String tableName = "";
+		if (dropQueryTokens.size()==3) {
+				tableName = dropQueryTokens.get(2);
+		}
+		else {
+			System.out.println("Error: You have an error in your SQL syntax;");
+			return;
+		}
+		
+		String tableFileName = tableName+".tbl";
+		String dbName = getDatabaseName();
+		String tablePath = currentDatabasePath+"user_data\\"+tableFileName;
+		String metadataColumnPath = currentDatabasePath+"catalog\\metadata_columns.tbl";
+		String metadataTablePath = currentDatabasePath+"catalog\\metadata_tables.tbl";
+		
+		FileUtils fu = new FileUtils();
+//		if (fu.tableExists(tablePath)==false) {
+//			System.out.println("Error: Table "+dbName+"."+tableName+" does not exist;");
+//			return;
+//		}
+		try {
+			RandomAccessFile columnFile = new RandomAccessFile(metadataColumnPath, "rw");
+			RandomAccessFile metadataTableFile = new RandomAccessFile(metadataTablePath, "rw");
+			File tableFile = new File(tablePath);
+						
+			dropRecords(columnFile, tableName, 1);
+			dropRecords(metadataTableFile, tableName, 1);
+			
+	        boolean isDeleted = tableFile.delete();
+			if (isDeleted) {
+				System.out.println(dbName+"."+tableName+" has been deleted successfully;");
+			}
+			else {
+				System.out.println("Error: table has not been deleted");
+			}
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		
 	}
 
 
@@ -852,7 +894,7 @@ public class DBMSPrompt {
 		}
 		ArrayList<String> selectQueryTokens = new ArrayList<String>(Arrays.asList(queryString.trim().split("from")));
 		if (selectQueryTokens.size()!=2) {
-			System.out.println("Error: Syntex error");
+			System.out.println("Error: Syntax error");
 			return;
 		}
 		ArrayList<String> beforeFromTokens = new ArrayList<String>(Arrays.asList(selectQueryTokens.get(0).trim().split(" ")));
@@ -885,7 +927,7 @@ public class DBMSPrompt {
 			conditionFlag= true;
 			ArrayList<String> whereTokens = new ArrayList<String>(Arrays.asList(queryString.trim().split("where")));
 			if (whereTokens.size()!=2) {
-				System.out.println("Error: Syntex error in WHERE clause");
+				System.out.println("Error: Syntax error in WHERE clause");
 				return;
 			}
 			if (whereTokens.get(1).contains("=")) {
@@ -897,7 +939,7 @@ public class DBMSPrompt {
 				}
 			}
 			else {
-				System.out.println("Error: Syntex error in WHERE clause");
+				System.out.println("Error: Syntax error in WHERE clause");
 				return;				
 			}
 		}
@@ -923,7 +965,7 @@ public class DBMSPrompt {
 		}
 		try {
 			RandomAccessFile columnFile = new RandomAccessFile(metadataColumnPath, "r");
-			RandomAccessFile tableFile = new RandomAccessFile(tablePath, "rw");
+			RandomAccessFile tableFile = new RandomAccessFile(tablePath, "r");
 			ArrayList <Records[]> columnList =  readColumns(columnFile,tableName);
 			int totalColumns = columnList.size();
 			int conditionColIndex = -1;
@@ -989,38 +1031,41 @@ public class DBMSPrompt {
 					tableFile.seek(indexOffset);
 					int dataOffset = tableFile.readShort();
 //					System.out.println("   Inside for: dataOffset: "+dataOffset);
-					Records[] recordRow = readRecord(tableFile, dataOffset);
-//					System.out.println("recordRow.length: "+recordRow.length);
+					if (dataOffset!=-1) {
+						Records[] recordRow = readRecord(tableFile, dataOffset);
+//						System.out.println("recordRow.length: "+recordRow.length);
 
-					if (conditionFlag) {
-						String conditionValue = conditionTokens.get(1);
-						String colValue="";
-						try {
-							if (recordRow[conditionColIndex].data!=null) {
-								colValue = recordRow[conditionColIndex].data.toString();							
+						if (conditionFlag) {
+							String conditionValue = conditionTokens.get(1);
+							String colValue="";
+							try {
+								if (recordRow[conditionColIndex].data!=null) {
+									colValue = recordRow[conditionColIndex].data.toString();							
+								}
+								else {
+									colValue="";
+								}							
 							}
-							else {
-								colValue="";
-							}							
-						}
-						catch(ArrayIndexOutOfBoundsException e) {
-							System.out.println("Error: Syntex error");
-							return;
-						}
-						if (conditionValue.equalsIgnoreCase(colValue) && !(colValue.equalsIgnoreCase(""))) {
-							for (int j=0;j<totalSelectCols;j++) {
+							catch(ArrayIndexOutOfBoundsException e) {
+								System.out.println("Error: Syntax error");
+								return;
+							}
+							if (conditionValue.equalsIgnoreCase(colValue) && !(colValue.equalsIgnoreCase(""))) {
+								for (int j=0;j<totalSelectCols;j++) {
+									int index = selectColIndex[j];
+									printSelectRecords(recordRow[index]);
+								}
+								System.out.println("");											
+							}
+						}							
+						else {
+							for (int j=0; j<totalSelectCols; j++) {
 								int index = selectColIndex[j];
 								printSelectRecords(recordRow[index]);
 							}
 							System.out.println("");											
 						}
-					}							
-					else {
-						for (int j=0; j<totalSelectCols; j++) {
-							int index = selectColIndex[j];
-							printSelectRecords(recordRow[index]);
-						}
-						System.out.println("");											
+						
 					}
 
 					indexOffset+=2;
@@ -1063,7 +1108,7 @@ public class DBMSPrompt {
 //		System.out.println(insertQueryTokens.toString());
 //		System.out.println(beforeValuesTokens.toString());
 		if (beforeValuesTokens.size()<3 ||beforeValuesTokens.get(0).equalsIgnoreCase("insert")==false || beforeValuesTokens.get(1).equalsIgnoreCase("into")==false) {
-			System.out.println("Error: Insert command is not correct. Please check syntex");
+			System.out.println("Error: Insert command is not correct. Please check syntax;");
 			return;
 		}
 		
@@ -1106,7 +1151,7 @@ public class DBMSPrompt {
 			}
 		}
 		catch(Exception e) {
-			System.out.println("Error: Syntex error");
+			System.out.println("Error: Syntax error");
 			return;
 		}
 		String valueStr = "";
@@ -1118,7 +1163,7 @@ public class DBMSPrompt {
 			}
 		}
 		catch(Exception e) {
-			System.out.println("Error: Syntex error");
+			System.out.println("Error: Syntax error");
 			return;
 		}
 		ArrayList<String>  valueTokens =  new ArrayList<String>(Arrays.asList(valueStr.split(",")));
@@ -1238,10 +1283,12 @@ public class DBMSPrompt {
 					columnFile.seek(indexOffset);
 					int dataOffset = columnFile.readShort();
 //					System.out.println("   Inside for: dataOffset"+dataOffset);
-					Records[] recordRow = readRecord(columnFile, dataOffset);
-					String currentTableName = (String)recordRow[1].data;
-					if (currentTableName.equalsIgnoreCase(tableName)) {
-						columnList.add(recordRow);
+					if (dataOffset!=-1) {
+						Records[] recordRow = readRecord(columnFile, dataOffset);
+						String currentTableName = (String)recordRow[1].data;
+						if (currentTableName.equalsIgnoreCase(tableName)) {
+							columnList.add(recordRow);
+						}						
 					}
 //					System.out.println(String.valueOf(recordRow[0].data)+" "+(String)recordRow[1].data+" "+(String)recordRow[2].data+" "+(String)recordRow[3].data+" "+String.valueOf(recordRow[4].data)+" "+String.valueOf(recordRow[5].data));
 
@@ -1255,6 +1302,44 @@ public class DBMSPrompt {
 		return columnList;
 		
 	}
+	
+	
+	public static void dropRecords(RandomAccessFile file, String dropValue, int ColPosition ) {
+		long pagePointer = -512;
+		/*reading metadata table*/
+		FileUtils fu = new FileUtils();
+		try {
+			do {
+				pagePointer+=pageSize;
+				int nCellInPage=fu.getnCellInFile(file, pagePointer);
+				long indexOffset = pagePointer+8;
+				/*read all items in the given page*/
+	//				System.out.println("   Inside While: IndexOffset: "+indexOffset);
+				for (int i=0; i<nCellInPage; i++) {
+	
+					file.seek(indexOffset);
+					int dataOffset = file.readShort();
+	//					System.out.println("   Inside for: dataOffset"+dataOffset);
+					if (dataOffset!=-1) {
+						Records[] recordRow = readRecord(file, dataOffset);
+						String currentTableName = (String)recordRow[ColPosition].data;
+						if (currentTableName.equalsIgnoreCase(dropValue)) {
+							file.seek(indexOffset);
+							System.out.println("indexOffset:"+indexOffset);
+							file.writeShort(-1);					
+						}
+					}
+	//					System.out.println(String.valueOf(recordRow[0].data)+" "+(String)recordRow[1].data+" "+(String)recordRow[2].data+" "+(String)recordRow[3].data+" "+String.valueOf(recordRow[4].data)+" "+String.valueOf(recordRow[5].data));
+					
+					indexOffset+=2;
+				}
+			}while(fu.nextPageExist(file, pagePointer));
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
 	
 	public static Records[] readRecord(RandomAccessFile columnFile, long dataOffset) {
 		Records[] columnData = null;
