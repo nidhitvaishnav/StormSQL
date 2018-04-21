@@ -211,12 +211,12 @@ public class DBMSPrompt {
 				deleteQuery(userCommand);
 				break;
 			case "update":
-				System.out.println("CASE: UPDATE");
+//				System.out.println("CASE: UPDATE");
 				parseUpdate(userCommand);
 				break;
 
 			case "select":
-				System.out.println("CASE: SELECT");
+//				System.out.println("CASE: SELECT");
 				parseSelectQuery(userCommand);
 				break;
 			
@@ -704,7 +704,7 @@ public class DBMSPrompt {
 	        		file.writeInt((int)tableData[i].data);
 	        	}
 	        	else if (tableData[i].serialCode==0x03 || tableData[i].serialCode==0x07 || tableData[i].serialCode==0x09 || tableData[i].serialCode==0x0A || tableData[i].serialCode==0x0B) {
-	        		file.writeLong((int)tableData[i].data);	
+	        		file.writeLong((long)tableData[i].data);	
 	        	}
 	        	else{
 	        		if (tableData[i].serialCode>0x0C) {
@@ -894,12 +894,225 @@ public class DBMSPrompt {
 	 *  @param updateString is a String of the user input
 	 */
 	public static void parseUpdate(String updateString) {
-		System.out.println("STUB: This is the dropTable method");
-		System.out.println("Parsing the string:\"" + updateString + "\"");
+//		System.out.println("STUB: This is the dropTable method");
+//		System.out.println("Parsing the string:\"" + updateString + "\"");
 		if (currentDatabasePath.equals("")) {
 			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
 			return;
 		}
+		ArrayList<String> updateQueryTokens = new ArrayList<String>(Arrays.asList(updateString.trim().split(" ")));
+		
+		String tableName = "";
+		if(updateQueryTokens.size()<2) {
+			System.out.println("Error: You have Error in your SQL syntax;");
+			return;
+		}
+		tableName = updateQueryTokens.get(1);
+		String tableFileName = tableName+".tbl";
+		String dbName = getDatabaseName();
+		String tablePath = currentDatabasePath+"user_data\\"+tableFileName;
+		String metadataColumnPath = currentDatabasePath+"catalog\\metadata_columns.tbl";
+		
+		
+		if(!updateString.contains("set")) {
+			System.out.println("Error: You have Error in your SQL syntax;");
+			return;
+		}
+		ArrayList<String> setQueryTokens = new ArrayList<String>(Arrays.asList(updateString.trim().split("set")));
+		if(setQueryTokens.size()!=2) {
+			System.out.println("Error: You have Error in your SQL syntax;");
+			return;
+		}
+		
+		
+		boolean conditionFlag = false;
+		ArrayList<String> whereQueryTokens = new ArrayList<String>();
+		ArrayList<String> updateTokens = new ArrayList<String>();
+		ArrayList<String> conditionTokens = new ArrayList<String>();
+		String conditionColumn="";
+		String conditionValue="";
+		if(updateString.contains("where")) {
+			conditionFlag = true;
+			whereQueryTokens = new ArrayList<String>(Arrays.asList(setQueryTokens.get(1).trim().split("where")));
+			if(whereQueryTokens.size()!=2) {
+				System.out.println("Error: You have Error in your SQL syntax;");
+				return;
+			}
+			
+			
+			updateTokens =  new ArrayList<String>(Arrays.asList(whereQueryTokens.get(0).trim().split("=")));
+			conditionTokens=new ArrayList<String>(Arrays.asList(whereQueryTokens.get(1).trim().split("=")));
+			conditionTokens = trimArrayListStrTokens(conditionTokens);
+//			System.out.println("conditionTokens: "+conditionTokens.toString());
+			conditionColumn = conditionTokens.get(0);
+			conditionValue = conditionTokens.get(1);
+		}
+		else {
+			updateTokens = new ArrayList<String>(Arrays.asList(setQueryTokens.get(1).trim().split("=")));
+		}
+		updateTokens = trimArrayListStrTokens(updateTokens);
+		String updateColumn = updateTokens.get(0);
+		String updateValue = updateTokens.get(1);
+		
+		if (updateColumn.equalsIgnoreCase("row_id")) {
+			System.out.println("Error: You cannot update row_id; It is inbuilt column;");
+			return;
+		}
+//		System.out.println("updateQueryTokens: "+updateQueryTokens.toString());
+//		System.out.println("setQueryTokes: "+setQueryTokens.toString());
+
+		System.out.println("updateTokens: "+updateTokens.toString());
+		
+		FileUtils fu = new FileUtils();
+		
+		try {
+			RandomAccessFile columnFile = new RandomAccessFile(metadataColumnPath, "r");
+			RandomAccessFile tableFile = new RandomAccessFile(tablePath, "rw");
+			ArrayList <Records[]> columnList =  readColumns(columnFile,tableName);
+			int totalColumns = columnList.size();
+			
+			int updateColIndex = -1;
+			int conditionColIndex = -1;
+			for (int j=0; j<totalColumns; j++) {
+				String columnName = columnList.get(j)[2].data.toString();
+				if (updateColumn.equalsIgnoreCase(columnName)) {
+					updateColIndex=j;
+				}
+				if (conditionFlag) {
+					if (conditionColumn.equalsIgnoreCase(columnName)) {
+						conditionColIndex=j;
+					}	
+				}
+			}
+			if (updateColIndex==-1) {
+				System.out.println("Error: "+updateColumn+" column does not exist in "+dbName+"."+tableName+";");
+				return;
+			}
+			if (conditionFlag) {
+				if (conditionColIndex==-1) {
+					System.out.println("Error: "+updateColumn+" column does not exist in "+dbName+"."+tableName+";");
+					return;
+				}
+			}
+			
+			
+			System.out.println("\n---------------------------------------------------------");
+			
+			Records[] tableData = new Records[totalColumns];
+			long pagePointer = -512;
+			/*reading metadata table*/
+			do {
+				pagePointer+=pageSize;
+				int nCellInPage=fu.getnCellInFile(tableFile, pagePointer);
+				long indexOffset = pagePointer+8;
+				/*read all items in the given page*/
+//				System.out.println("   Inside While: IndexOffset: "+indexOffset);
+				
+				for (int i=0; i<nCellInPage; i++) {
+
+					tableFile.seek(indexOffset);
+					int dataOffset = tableFile.readShort();
+//					System.out.println("   Inside for: dataOffset: "+dataOffset);
+					if (dataOffset!=-1) {
+						Records[] recordRow = readRecord(tableFile, dataOffset);
+						Records[] updatedRecordRow;
+//						System.out.println("recordRow.length: "+recordRow.length);
+						String colValue;
+						if (conditionFlag) {
+							try {
+								if (recordRow[conditionColIndex].data!=null) {
+									colValue = recordRow[conditionColIndex].data.toString();							
+								}
+								else {
+									colValue="";
+								}							
+							}
+							catch(ArrayIndexOutOfBoundsException e) {
+								System.out.println("Error: Syntax error");
+								return;
+							}
+							if (conditionValue.equalsIgnoreCase(colValue) && !(colValue.equalsIgnoreCase(""))) {
+//								for (int j=0;j<totalSelectCols;j++) {
+//									int index = selectColIndex[j];
+//									printSelectRecords(recordRow[index]);
+//								}
+//								System.out.println("");		
+								updatedRecordRow = updateRecordRow(recordRow, updateColIndex, updateValue);
+								updateFile(tableFile, dataOffset, updatedRecordRow, updateColIndex);
+							}
+						}							
+						else {
+							updatedRecordRow = updateRecordRow(recordRow, updateColIndex, updateValue);
+							updateFile(tableFile, dataOffset, updatedRecordRow, updateColIndex);
+						}
+						
+					}
+
+					indexOffset+=2;
+				}
+			}while(fu.nextPageExist(tableFile, pagePointer));
+			System.out.println("---------------------");
+			columnFile.close();
+			tableFile.close();
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+
+		
+		
+		
+
+	}
+	
+	
+
+	
+	public static Records[] updateRecordRow(Records[] recordRow, int updateColIndex, String updateValue) {
+		System.out.println("old Value: "+recordRow[updateColIndex].data);
+
+		int totalRecords = recordRow.length;
+		int serialCode = recordRow[updateColIndex].serialCode;
+		
+		if (serialCode<0x04) {
+			recordRow[updateColIndex].data=null;
+		}
+		else if (serialCode==0x04 || serialCode==0x05 || serialCode==0x06 || serialCode==0x08) {
+			recordRow[updateColIndex].data = Integer.parseInt(updateValue);
+    	}
+    	else if (serialCode==0x07 || serialCode==0x09 ) {
+    		recordRow[updateColIndex].data = Float.parseFloat(updateValue);
+    	}
+    	else if (serialCode==0x0A) {
+    		recordRow[updateColIndex].data = recordRow[updateColIndex].getDate(updateValue);
+    	}
+    	else if (serialCode==0x0B) {
+    		recordRow[updateColIndex].data = recordRow[updateColIndex].getDateTime((String)updateValue);
+    	}
+    	else
+    	{
+    		int nReadLen = recordRow[updateColIndex].nByte;
+    		
+    		int updateLen = updateValue.length();
+    		if (nReadLen==updateLen) {
+    			recordRow[updateColIndex].data=updateValue;	
+    		}
+    		else if (nReadLen<updateLen) {
+    			String subString = updateValue.substring(0, nReadLen);
+    			recordRow[updateColIndex].data = subString;
+    		}
+    		else {
+    			int diff = nReadLen-updateLen;
+    			String updateVal=updateValue;
+    			for (int k=0; k<diff; k++) {
+        			updateVal+=" ";		
+    			}
+    			recordRow[updateColIndex].data = updateVal;
+    		}
+
+		}
+		System.out.println("Updated Value: "+recordRow[updateColIndex].data);
+		return recordRow;		
 	}
 	
 	/**
@@ -958,6 +1171,7 @@ public class DBMSPrompt {
 						conditionTokens.add(tempConditionTokens.get(i).trim());
 					}
 				}
+//				conditionTokens = trimArrayListStrTokens(tempConditionTokens);
 			}
 			else {
 				System.out.println("Error: Syntax error in WHERE clause");
@@ -1442,4 +1656,98 @@ public class DBMSPrompt {
 		}
 		return columnData;
 	}
+	
+	
+	public static void updateFile(RandomAccessFile columnFile, long dataOffset, Records[] updatedRecordRow, int updateColIndex) {
+		try {
+//			Records[] columnData = null;
+			Object temp;
+			if (dataOffset!=-1) {
+
+				columnFile.seek(dataOffset);
+				/*read number of column*/
+				int tempNCols = columnFile.readByte();
+//				System.out.println("TempNCols: "+tempNCols);
+				
+				
+				
+				for (int j=0; j<tempNCols; j++) {
+					temp= columnFile.readByte();
+//					System.out.println("serialCode: "+columnData[j].serialCode + " nByte: "+columnData[j].nByte);
+				}
+				for (int j=0; j<tempNCols; j++) {
+					if (updatedRecordRow[j].serialCode<0x04) {
+						//do nothing
+					}
+					else if (updatedRecordRow[j].serialCode==0x04) {
+						if (j==updateColIndex) {
+							columnFile.writeByte((int)updatedRecordRow[j].data);
+						}
+						else {
+							temp = columnFile.readByte();							
+						}
+//						System.out.println("data: "+columnData[j].data);
+		        	}
+		        	else if (updatedRecordRow[j].serialCode==0x05) {
+		        		if (j==updateColIndex) {
+		        			columnFile.writeShort((int)updatedRecordRow[j].data);
+		        		}
+		        		else {
+		        			temp= columnFile.readShort();	
+		        		}
+//						System.out.println("data: "+columnData[j].data);
+
+		        	}
+		        	else if (updatedRecordRow[j].serialCode==0x06 || updatedRecordRow[j].serialCode==0x08) {
+		        		if (j==updateColIndex) {
+		        			columnFile.writeInt((int)updatedRecordRow[j].data);
+		        		}
+		        		else {
+		        			temp= columnFile.readInt();	
+		        		}
+//  						System.out.println("data: "+columnData[j].data);
+
+		        	}
+		        	else if (updatedRecordRow[j].serialCode==0x07 || updatedRecordRow[j].serialCode==0x09 || updatedRecordRow[j].serialCode==0x0A || updatedRecordRow[j].serialCode==0x0B) {
+		        		if (j==updateColIndex) {
+		        			columnFile.writeLong((long)updatedRecordRow[j].data);
+		        		}
+		        		else {
+		        			temp= columnFile.readLong();	
+		        		}
+//						System.out.println("data: "+columnData[j].data);
+
+		        	}
+		        	else
+		        	{
+		        		if (j==updateColIndex) {
+		        			columnFile.writeBytes((String)updatedRecordRow[j].data);
+		        		}
+		        		else {
+			        		int nReadLen = updatedRecordRow[j].nByte;
+			        		for (int i=0; i<nReadLen; i++) {
+			        			temp=(char)columnFile.readByte();
+			        		}
+		        		}
+		        	}
+				}
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}
+
+	
+	
+	
+
+	public static ArrayList<String> trimArrayListStrTokens(ArrayList<String> stringTokens) {
+		for (int i=0; i<stringTokens.size();i++) {
+			stringTokens.set(i, stringTokens.get(i).trim());
+		}
+		return stringTokens;
+	}
 }
+
