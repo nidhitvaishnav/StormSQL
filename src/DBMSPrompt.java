@@ -208,7 +208,7 @@ public class DBMSPrompt {
 				break;
 			case "delete":
 				System.out.println("CASE: DELETE");
-				deleteQuery(userCommand);
+//				deleteQuery(userCommand);
 				break;
 			case "update":
 //				System.out.println("CASE: UPDATE");
@@ -1031,7 +1031,7 @@ public class DBMSPrompt {
 								System.out.println("Error: Syntax error");
 								return;
 							}
-							if (conditionValue.equalsIgnoreCase(colValue) && !(colValue.equalsIgnoreCase(""))) {
+							if (conditionValue.equalsIgnoreCase(colValue.trim()) && !(colValue.equalsIgnoreCase(""))) {
 //								for (int j=0;j<totalSelectCols;j++) {
 //									int index = selectColIndex[j];
 //									printSelectRecords(recordRow[index]);
@@ -1285,7 +1285,7 @@ public class DBMSPrompt {
 								System.out.println("Error: Syntax error");
 								return;
 							}
-							if (conditionValue.equalsIgnoreCase(colValue) && !(colValue.equalsIgnoreCase(""))) {
+							if (conditionValue.equalsIgnoreCase(colValue.trim()) && !(colValue.equalsIgnoreCase(""))) {
 								for (int j=0;j<totalSelectCols;j++) {
 									int index = selectColIndex[j];
 									printSelectRecords(recordRow[index]);
