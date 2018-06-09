@@ -208,7 +208,7 @@ public class DBMSPrompt {
 				break;
 			case "delete":
 				System.out.println("CASE: DELETE");
-//				deleteQuery(userCommand);
+				deleteQuery(userCommand);
 				break;
 			case "update":
 //				System.out.println("CASE: UPDATE");
@@ -1492,9 +1492,62 @@ public class DBMSPrompt {
 //		System.out.println("STUB: This is the delete method");
 //		System.out.println("Parsing the string:\"" + queryString + "\"");
 		if (currentDatabasePath.equals("")) {
-			System.out.println("No database selected. Select the default DB to be used by USE databseName;");
+			System.out.println("Error: No database selected. Select the default DB to be used by USE databseName;");
 			return;
 		}
+		ArrayList<String> deleteQueryTokens = new ArrayList<String>(Arrays.asList(queryString.split(" ")));
+		if (!(deleteQueryTokens.size()>=3)) {
+			System.out.println("Error: query is incomplete.");
+			return;
+		}
+		String tableName="";
+		if (deleteQueryTokens.size()>=3 && deleteQueryTokens.get(0).equalsIgnoreCase("delete") && deleteQueryTokens.get(1).equalsIgnoreCase("from")) {
+			tableName = deleteQueryTokens.get(2);
+		}
+		else {
+			System.out.println("Error: Error in the query syntex. please check the syntax.");
+		}
+		String tableFileName = tableName+".tbl";
+		String dbName = getDatabaseName();
+		
+		String tablePath = currentDatabasePath+"user_data\\"+tableFileName;
+		String metadataColumnPath = currentDatabasePath+"catalog\\metadata_columns.tbl";
+		
+		FileUtils fu = new FileUtils();
+		if (fu.tableExists(tablePath)==false) {
+			System.out.println("Error: Table "+dbName+"."+tableName+" does not exist;");
+			return;
+		}
+		
+		boolean conditionFlag = false;
+		ArrayList<String> conditionTokens = new ArrayList<String>();
+		if (queryString.contains("where")) {
+			conditionFlag= true;
+			ArrayList<String> whereTokens = new ArrayList<String>(Arrays.asList(queryString.trim().split("where")));
+			if (whereTokens.size()!=2) {
+				System.out.println("Error: Syntax error in WHERE clause");
+				return;
+			}
+			if (whereTokens.get(1).contains("=")) {
+				ArrayList<String> tempConditionTokens = new ArrayList<String>(Arrays.asList(whereTokens.get(1).trim().split("=")));				
+				for (int i=0; i<tempConditionTokens.size(); i++) {
+					if (!tempConditionTokens.get(i).equalsIgnoreCase("")){
+						conditionTokens.add(tempConditionTokens.get(i).trim());
+					}
+				}
+				conditionTokens = trimArrayListStrTokens(tempConditionTokens);
+			}
+			else {
+				System.out.println("Error: Syntax error in WHERE clause");
+				return;				
+			}
+		}
+		System.out.println("conditionTokens: "+conditionTokens.toString());
+
+		
+		
+		
+				
 	}
 	
 	public static ArrayList <Records[]> readColumns(RandomAccessFile columnFile, String tableName) {
