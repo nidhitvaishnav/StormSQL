@@ -207,7 +207,6 @@ public class DBMSPrompt {
 				insertQuery(userCommand);
 				break;
 			case "delete":
-				System.out.println("CASE: DELETE");
 				deleteQuery(userCommand);
 				break;
 			case "update":
@@ -1542,12 +1541,45 @@ public class DBMSPrompt {
 				return;				
 			}
 		}
-		System.out.println("conditionTokens: "+conditionTokens.toString());
-
+//		System.out.println("conditionTokens: "+conditionTokens.toString());
 		
-		
-		
+		RandomAccessFile columnFile;
+		RandomAccessFile tableFile;
+		try {
+			tableFile = new RandomAccessFile(tablePath, "rw");
+			columnFile = new RandomAccessFile(metadataColumnPath, "r");
+			ArrayList<Records[]> columns = readColumns(columnFile, tableName);
+			int columnIndex = -1;
+			
+			if (conditionFlag) {
+				for (int i=0; i<columns.size(); i++) {
+					String columnName = columns.get(i)[2].data.toString().trim();
+					if(columnName.equalsIgnoreCase(conditionTokens.get(0).trim())) {
+						columnIndex = i;
+						break;
+					}
+				}
+				if (columnIndex==-1) {
+					System.out.println("Error: Column not found");
+					return;
+				}
+				else {
+					String value = conditionTokens.get(1).trim();
+					dropRecords(tableFile, conditionTokens.get(1).trim(), columnIndex);
+					System.out.println("Data has been deleted successfully");
+				}
 				
+			}
+			else {
+				dropRecords(tableFile, "%^&!Dr0P\\e<3rY!@}TH!ng", columnIndex);		
+				System.out.println("All data has been deleted successfully");	
+			}
+			tableFile.close();
+			columnFile.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+			return;
+		}		
 	}
 	
 	public static ArrayList <Records[]> readColumns(RandomAccessFile columnFile, String tableName) {
@@ -1594,7 +1626,7 @@ public class DBMSPrompt {
 	}
 	
 	
-	public static void dropRecords(RandomAccessFile file, String dropValue, int ColPosition ) {
+	public static void dropRecords(RandomAccessFile file, String dropValue, int colPosition ) {
 		long pagePointer = -512;
 		/*reading metadata table*/
 		FileUtils fu = new FileUtils();
@@ -1612,10 +1644,20 @@ public class DBMSPrompt {
 	//					System.out.println("   Inside for: dataOffset"+dataOffset);
 					if (dataOffset!=-1) {
 						Records[] recordRow = readRecord(file, dataOffset);
-						String currentTableName = (String)recordRow[ColPosition].data;
-						if (currentTableName.equalsIgnoreCase(dropValue)) {
+						
+//						String currentValue = (String)recordRow[ColPosition].data;
+						
+						String colValue="";
+						try {
+							if (colPosition>-1 && recordRow[colPosition].data!=null) {
+								colValue = recordRow[colPosition].data.toString();							
+							}
+						}
+						catch(Exception e){
+							e.printStackTrace();
+						}
+						if (colValue.equalsIgnoreCase(dropValue) || (dropValue.equals("%^&!Dr0P\\e<3rY!@}TH!ng") && colPosition==-1)) {
 							file.seek(indexOffset);
-							System.out.println("indexOffset:"+indexOffset);
 							file.writeShort(-1);					
 						}
 					}
